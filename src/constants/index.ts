@@ -1,4 +1,4 @@
-export const API_URL = 'http://192.168.18.2:8080/api';
+export const API_URL = 'http://192.168.18.89:8080/api';
 
 export const ROLES = {
     ESTUDIANTE: 'ESTUDIANTE',

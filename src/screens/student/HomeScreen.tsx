@@ -8,14 +8,19 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQuery } from '@tanstack/react-query';
-import { useAuthStore } from '../../store';
+import { useAuthStore, useCartStore } from '../../store';
 import { productsApi, aiApi } from '../../api';
+import { StudentStackParamList } from '../../navigation/types';
 import { Product, Recommendation } from '../../types';
 import { formatCurrency, truncateText } from '../../utils';
 import { ORDER_STATUS_COLOR, PRODUCT_CATEGORIES } from '../../constants';
 
 export const HomeScreen = () => {
+  const navigation = useNavigation<NativeStackNavigationProp<StudentStackParamList>>();
   const { user } = useAuthStore();
   const [refreshing, setRefreshing] = useState(false);
 
@@ -50,10 +55,13 @@ export const HomeScreen = () => {
           <Text style={styles.greeting}>¡Hola, {user?.nombres}! 👋</Text>
           <Text style={styles.subtitle}>¿Qué se te antoja hoy?</Text>
         </View>
-        <View style={styles.avatarContainer}>
-          <Text style={styles.avatarText}>
-            {user?.nombres?.charAt(0)}{user?.apellidos?.charAt(0)}
-          </Text>
+        <View style={styles.headerActions}>
+          <CartHeaderButton onPress={() => navigation.navigate('Cart')} />
+          <View style={styles.avatarContainer}>
+            <Text style={styles.avatarText}>
+              {user?.nombres?.charAt(0)}{user?.apellidos?.charAt(0)}
+            </Text>
+          </View>
         </View>
       </View>
 
@@ -94,6 +102,23 @@ export const HomeScreen = () => {
 
       <View style={{ height: 100 }} />
     </ScrollView>
+  );
+};
+
+const CartHeaderButton = ({ onPress }: { onPress: () => void }) => {
+  const items = useCartStore((state) => state.items);
+  const getItemCount = useCartStore((state) => state.getItemCount);
+  const itemCount = getItemCount();
+
+  return (
+    <TouchableOpacity style={styles.cartHeaderButton} onPress={onPress}>
+      <Ionicons name="cart-outline" size={22} color="#FFFFFF" />
+      {items.length > 0 && (
+        <View style={styles.cartBadge}>
+          <Text style={styles.cartBadgeText}>{itemCount}</Text>
+        </View>
+      )}
+    </TouchableOpacity>
   );
 };
 
@@ -162,6 +187,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatarText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  cartHeaderButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#F97316',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  cartBadgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '800' },
   section: { paddingTop: 24, paddingHorizontal: 16 },
   sectionHeader: {
     flexDirection: 'row',

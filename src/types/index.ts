@@ -104,6 +104,19 @@ export interface CreateOrderRequest {
     propina?: number;
 }
 
+export interface PaymentResponse {
+    id: number;
+    orderId: number;
+    userId: number;
+    amount: number;
+    status: string;
+    externalId: string;
+    paymentUrl: string;
+    failureReason?: string;
+    creadoEn: string;
+    actualizadoEn: string;
+}
+
 export interface Aula {
     id: number;
     codigo: string;
@@ -153,12 +166,10 @@ export interface RepartidorPerfil {
 
 export interface PageResponse<T> {
     content: T[];
-    page: {
-        size: number;
-        number: number;
-        totalElements: number;
-        totalPages: number;
-    };
+    totalElements: number;
+    totalPages: number;
+    currentPage: number;
+    pageSize: number;
 }
 
 export interface ApiError {
