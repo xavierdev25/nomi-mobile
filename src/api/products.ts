@@ -27,7 +27,9 @@ export const productsApi = {
     },
 
     getByStore: async (storeId: number): Promise<Product[]> => {
-        const response = await apiClient.get(`/products/store/${storeId}/activos`);
-        return response.data;
+        const response = await apiClient.get('/products/search', {
+            params: { storeId, disponible: true, size: 50 }
+        });
+        return response.data.content;
     },
 };

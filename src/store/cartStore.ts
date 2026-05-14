@@ -5,8 +5,10 @@ interface CartState {
     items: CartItem[];
     storeId: number | null;
     propina: number;
+    lastAulaId: number | null;
+    setLastAulaId: (aulaId: number) => void;
 
-    addItem: (product: Product) => void;
+    addItem: (product: Product, forceReplace?: boolean) => boolean;
     removeItem: (productId: number) => void;
     updateQuantity: (productId: number, cantidad: number) => void;
     clearCart: () => void;
@@ -19,16 +21,16 @@ export const useCartStore = create<CartState>((set, get) => ({
     items: [],
     storeId: null,
     propina: 0,
+    lastAulaId: null,
+    setLastAulaId: (aulaId) => set({ lastAulaId: aulaId }),
 
-    addItem: (product) => {
+    addItem: (product: Product, forceReplace = false) => {
         const { items, storeId } = get();
-
-        // Si el carrito tiene productos de otra tienda, limpiar primero
         if (storeId && storeId !== product.storeId) {
+            if (!forceReplace) return false; // señal de conflicto
             set({ items: [{ product, cantidad: 1 }], storeId: product.storeId });
-            return;
+            return true;
         }
-
         const existing = items.find((i) => i.product.id === product.id);
         if (existing) {
             set({
@@ -39,6 +41,7 @@ export const useCartStore = create<CartState>((set, get) => ({
         } else {
             set({ items: [...items, { product, cantidad: 1 }], storeId: product.storeId });
         }
+        return true;
     },
 
     removeItem: (productId) => {
@@ -66,7 +69,7 @@ export const useCartStore = create<CartState>((set, get) => ({
     getTotal: () => {
         const { items, propina } = get();
         const subtotal = items.reduce((sum, i) => sum + i.product.precio * i.cantidad, 0);
-        return subtotal + propina + 1.5; // + tarifa de servicio
+        return subtotal + propina + 0.5 + 0.2;
     },
 
     getItemCount: () => get().items.reduce((sum, i) => sum + i.cantidad, 0),

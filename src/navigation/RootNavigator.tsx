@@ -9,11 +9,12 @@ import { StoreNavigator } from './StoreNavigator';
 import { View, ActivityIndicator } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { authApi } from '../api';
+import { Colors } from '@/theme/tokens';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export const RootNavigator = () => {
-  const { isAuthenticated, isLoading, user, setUser, setAuth, clearAuth } = useAuthStore();
+  const { isAuthenticated, isLoading, user, setAuth, clearAuth } = useAuthStore();
 
   useEffect(() => {
     const init = async () => {
@@ -36,24 +37,15 @@ export const RootNavigator = () => {
       }
     };
     init();
-  }, []);
+  }, [clearAuth, setAuth]);
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F97316' }}>
-        <ActivityIndicator size="large" color="#FFFFFF" />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.blue[500] }}>
+        <ActivityIndicator size="large" color={Colors.white} />
       </View>
     );
   }
-
-  const getInitialRoute = (): keyof RootStackParamList => {
-    if (!isAuthenticated || !user) return 'Auth';
-    switch (user.role) {
-      case 'COMERCIO': return 'Store';
-      case 'REPARTIDOR': return 'Delivery';
-      default: return 'Student';
-    }
-  };
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>

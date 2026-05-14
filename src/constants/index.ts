@@ -1,4 +1,6 @@
-export const API_URL = 'http://192.168.18.89:8080/api';
+import { Colors } from '@/theme/tokens';
+
+export const API_URL = 'http://172.20.10.13:8080/api';
 
 export const ROLES = {
     ESTUDIANTE: 'ESTUDIANTE',
@@ -26,12 +28,12 @@ export const ORDER_STATUS_LABEL: Record<string, string> = {
 };
 
 export const ORDER_STATUS_COLOR: Record<string, string> = {
-    PENDIENTE: '#F59E0B',
-    PREPARANDO: '#3B82F6',
-    LISTO_PARA_RECOGER: '#8B5CF6',
-    EN_CAMINO: '#F97316',
-    ENTREGADO: '#10B981',
-    CANCELADO: '#EF4444',
+    PENDIENTE: Colors.warning,
+    PREPARANDO: Colors.blue[400],
+    LISTO_PARA_RECOGER: Colors.blue[500],
+    EN_CAMINO: Colors.orange[500],
+    ENTREGADO: Colors.success,
+    CANCELADO: Colors.error,
 };
 
 export const PRODUCT_CATEGORIES = {

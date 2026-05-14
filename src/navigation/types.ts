@@ -21,6 +21,8 @@ export type StudentStackParamList = {
     OrderDetail: { orderId: number };
     OrderTracking: { orderId: number };
     Recommendations: undefined;
+    FavoriteProducts: undefined;
+    FavoriteStores: undefined;
 };
 
 export type DeliveryTabParamList = {

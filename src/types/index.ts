@@ -63,6 +63,8 @@ export interface Store {
     ownerId: number;
     activo: boolean;
     creadoEn: string;
+    horarioApertura?: string;
+    horarioCierre?: string;
 }
 
 export interface OrderItem {
@@ -177,4 +179,18 @@ export interface ApiError {
     message: string;
     status: number;
     timestamp: string;
+}
+
+export interface FavoriteProduct {
+    id: number;
+    userId: number;
+    productId: number;
+    creadoEn: string;
+}
+
+export interface FavoriteStore {
+    id: number;
+    userId: number;
+    storeId: number;
+    creadoEn: string;
 }

@@ -12,38 +12,28 @@ type ProductSearchParams = {
 };
 
 export const useProductSearch = ({
-  nombre,
-  categoria,
-  precioMin,
-  precioMax,
-  soloDisponibles,
+  nombre, categoria, precioMin, precioMax, soloDisponibles,
 }: ProductSearchParams) => {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
 
   const { data, isFetching, isError, refetch } = useQuery({
-    queryKey: [
-      'products',
-      'search',
-      { nombre, categoria, precioMin, precioMax, soloDisponibles, currentPage },
-    ],
-    queryFn: () =>
-      productsApi.search({
-        ...(nombre.trim() !== '' ? { nombre: nombre.trim() } : {}),
-        ...(categoria !== null ? { categoria } : {}),
-        ...(precioMin !== null ? { precioMin } : {}),
-        ...(precioMax !== null ? { precioMax } : {}),
-        ...(soloDisponibles ? { disponible: true } : {}),
-        page: currentPage,
-        size: 20,
-      }),
-    staleTime: 1000 * 60 * 2,
+    queryKey: ['products', 'search', { nombre, categoria, precioMin, precioMax, soloDisponibles, currentPage }],
+    queryFn: () => productsApi.search({
+      ...(nombre.trim() !== '' ? { nombre: nombre.trim() } : {}),
+      ...(categoria !== null ? { categoria } : {}),
+      ...(precioMin !== null ? { precioMin } : {}),
+      ...(precioMax !== null ? { precioMax } : {}),
+      ...(soloDisponibles ? { disponible: true } : {}),
+      page: currentPage,
+      size: 20,
+    }),
+    staleTime: 0,
     placeholderData: keepPreviousData,
   });
 
   useEffect(() => {
     if (!data) return;
-
     if (data.currentPage === 0) {
       setAllProducts(data.content);
     } else {

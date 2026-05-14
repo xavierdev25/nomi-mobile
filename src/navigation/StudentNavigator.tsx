@@ -10,23 +10,13 @@ import { ProductDetailScreen } from "../screens/student/ProductDetailScreen";
 import { CartScreen } from "../screens/student/CartScreen";
 import { CheckoutScreen } from "../screens/student/CheckoutScreen";
 import { OrderTrackingScreen } from "../screens/student/OrderTrackingScreen";
-
-// Placeholder screens
-const OrdersScreen = () => (
-  <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-    <Text>Orders</Text>
-  </View>
-);
-const ProfileScreen = () => (
-  <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-    <Text>Profile</Text>
-  </View>
-);
-const OrderDetailScreen = () => (
-  <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-    <Text>Order Detail</Text>
-  </View>
-);
+import { OrdersScreen } from "../screens/student/OrdersScreen";
+import { OrderDetailScreen } from "../screens/student/OrderDetailScreen";
+import { ProfileScreen } from "../screens/student/ProfileScreen";
+import { StoreDetailScreen } from "../screens/student/StoreDetailScreen";
+import { FavoriteProductsScreen } from "../screens/student/FavoriteProductsScreen";
+import { FavoriteStoresScreen } from "../screens/student/FavoriteStoresScreen";
+import { Colors } from "@/theme/tokens";
 
 const Tab = createBottomTabNavigator<StudentTabParamList>();
 const Stack = createNativeStackNavigator<StudentStackParamList>();
@@ -35,8 +25,12 @@ const StudentTabs = () => (
   <Tab.Navigator
     screenOptions={({ route }) => ({
       headerShown: false,
-      tabBarActiveTintColor: "#F97316",
-      tabBarInactiveTintColor: "#9CA3AF",
+      tabBarActiveTintColor: Colors.orange[500],
+      tabBarInactiveTintColor: Colors.gray[400],
+      tabBarStyle: {
+        backgroundColor: Colors.blue[500],
+        borderTopWidth: 0,
+      },
       tabBarIcon: ({ focused, color, size }) => {
         const icons: Record<
           keyof StudentTabParamList,
@@ -83,5 +77,8 @@ export const StudentNavigator = () => (
     <Stack.Screen name="Checkout" component={CheckoutScreen} />
     <Stack.Screen name="OrderDetail" component={OrderDetailScreen} />
     <Stack.Screen name="OrderTracking" component={OrderTrackingScreen} />
+    <Stack.Screen name="StoreDetail" component={StoreDetailScreen} />
+    <Stack.Screen name="FavoriteProducts" component={FavoriteProductsScreen} />
+    <Stack.Screen name="FavoriteStores" component={FavoriteStoresScreen} />
   </Stack.Navigator>
 );

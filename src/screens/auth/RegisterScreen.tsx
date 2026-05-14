@@ -1,208 +1,203 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from "react";
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { AuthStackParamList } from '../../navigation/types';
-import { authApi } from '../../api';
-import { useAuthStore } from '../../store';
-import * as SecureStore from 'expo-secure-store';
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import * as SecureStore from "expo-secure-store";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { authApi } from "@/api";
+import { Button, Input, Tag } from "@/components/ui";
+import { AuthStackParamList } from "@/navigation/types";
+import { useAuthStore } from "@/store";
+import { Colors, Radius, Spacing } from "@/theme/tokens";
+import { TextStyles } from "@/theme/typography";
 
-type Props = {
-  navigation: NativeStackNavigationProp<AuthStackParamList, 'Register'>;
+type RegisterScreenProps = {
+  navigation: NativeStackNavigationProp<AuthStackParamList, "Register">;
 };
 
-export const RegisterScreen = ({ navigation }: Props) => {
-  const [step, setStep] = useState(1);
+type RegisterRole = "ESTUDIANTE" | "COMERCIO";
+type BudgetRange = "BAJO" | "MEDIO" | "ALTO";
+
+interface RegisterForm {
+  nombres: string;
+  apellidos: string;
+  email: string;
+  password: string;
+  telefono: string;
+  role: RegisterRole;
+  preferences: string[];
+  restrictions: string[];
+  budgetRange: BudgetRange;
+  cuisineTypes: string[];
+}
+
+const ROLE_OPTIONS: { value: RegisterRole; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { value: "ESTUDIANTE", label: "Estudiante", icon: "school-outline" },
+  { value: "COMERCIO", label: "Comercio", icon: "storefront-outline" },
+];
+
+const BUDGET_OPTIONS: { value: BudgetRange; label: string }[] = [
+  { value: "BAJO", label: "< S/ 5" },
+  { value: "MEDIO", label: "S/ 5-15" },
+  { value: "ALTO", label: "> S/ 15" },
+];
+
+const initialForm: RegisterForm = {
+  nombres: "",
+  apellidos: "",
+  email: "",
+  password: "",
+  telefono: "",
+  role: "ESTUDIANTE",
+  preferences: [],
+  restrictions: [],
+  budgetRange: "MEDIO",
+  cuisineTypes: [],
+};
+
+export const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
+  const insets = useSafeAreaInsets();
+  const [form, setForm] = useState<RegisterForm>(initialForm);
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [shakeKey, setShakeKey] = useState(0);
   const { setAuth } = useAuthStore();
 
-  const [form, setForm] = useState({
-    nombres: '',
-    apellidos: '',
-    email: '',
-    password: '',
-    telefono: '',
-    role: 'ESTUDIANTE',
-    preferences: [] as string[],
-    restrictions: [] as string[],
-    budgetRange: 'MEDIO',
-    cuisineTypes: [] as string[],
-  });
+  const updateForm = useCallback(<K extends keyof RegisterForm>(key: K, value: RegisterForm[K]) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  }, []);
 
-  const updateForm = (key: string, value: any) => setForm((prev) => ({ ...prev, [key]: value }));
+  const validate = useCallback((): Record<string, string> => {
+    const errs: Record<string, string> = {};
+    if (!form.nombres.trim()) errs.nombres = "Ingresa tus nombres.";
+    if (!form.apellidos.trim()) errs.apellidos = "Ingresa tus apellidos.";
+    if (!form.email.trim()) errs.email = "Ingresa tu correo institucional.";
+    if (form.email.trim() && !form.email.includes("@")) errs.email = "El correo no es válido.";
+    if (form.password.length < 8) errs.password = "Mínimo 8 caracteres.";
+    return errs;
+  }, [form]);
 
-  const handleRegister = async () => {
-  if (!form.nombres || !form.apellidos || !form.email || !form.password) {
-    Alert.alert('Error', 'Por favor completa todos los campos obligatorios');
-    return;
-  }
+  const handleRegister = useCallback(async () => {
+    const errs = validate();
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      setShakeKey((prev) => prev + 1);
+      return;
+    }
 
-  setLoading(true);
-  try {
-    await authApi.register(form);
-    const authResponse = await authApi.login({ email: form.email, password: form.password });
-
-    // Guardar tokens ANTES de llamar a /users/me
-    await SecureStore.setItemAsync('accessToken', authResponse.accessToken);
-    await SecureStore.setItemAsync('refreshToken', authResponse.refreshToken);
-
-    const user = await authApi.me();
-    await setAuth(user, authResponse.accessToken, authResponse.refreshToken);
-  } catch (error: any) {
-    const message = error?.response?.data?.message || error?.response?.data?.fields
-      ? Object.values(error?.response?.data?.fields || {}).join(', ')
-      : 'Error al registrarse';
-    Alert.alert('Error', typeof message === 'string' ? message : 'Error al registrarse');
-  } finally {
-    setLoading(false);
-  }
-};
+    setLoading(true);
+    setErrors({});
+    try {
+      await authApi.register(form);
+      const authResponse = await authApi.login({ email: form.email.trim(), password: form.password });
+      await SecureStore.setItemAsync("accessToken", authResponse.accessToken);
+      await SecureStore.setItemAsync("refreshToken", authResponse.refreshToken);
+      const user = await authApi.me();
+      await setAuth(user, authResponse.accessToken, authResponse.refreshToken);
+    } catch (error: unknown) {
+      const message =
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        typeof error.response === "object" &&
+        error.response !== null &&
+        "data" in error.response
+          ? "No pudimos crear tu cuenta. Revisa los datos."
+          : "Error inesperado. Intenta de nuevo.";
+      setErrors({ global: message });
+      setShakeKey((prev) => prev + 1);
+    } finally {
+      setLoading(false);
+    }
+  }, [form, setAuth, validate]);
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <StatusBar barStyle="light-content" backgroundColor={Colors.blue[500]} />
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={styles.backText}>←</Text>
-          </TouchableOpacity>
-          <Text style={styles.title}>Crear cuenta</Text>
-          <Text style={styles.subtitle}>Únete a FoodV hoy</Text>
+        <View style={[styles.header, { paddingTop: insets.top + Spacing[4] }]}>
+          <View style={styles.orangeBlock} />
+          <Pressable accessibilityRole="button" accessibilityLabel="Volver" onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={22} color={Colors.white} />
+          </Pressable>
+          <View>
+            <Text style={styles.title}>Crear cuenta</Text>
+            <Text style={styles.subtitle}>Únete a FoodV hoy</Text>
+          </View>
         </View>
 
-        {/* Form */}
         <View style={styles.form}>
+          {errors.global ? (
+            <View
+              key={`error-${shakeKey}`}
+              style={styles.errorBox}
+            >
+              <Ionicons name="alert-circle" size={16} color={Colors.error} />
+              <Text style={styles.errorText}>{errors.global}</Text>
+            </View>
+          ) : null}
 
-          {/* Role selector */}
           <View style={styles.roleContainer}>
-            {(['ESTUDIANTE', 'COMERCIO'] as const).map((role) => (
-              <TouchableOpacity
-                key={role}
-                style={[styles.roleButton, form.role === role && styles.roleButtonActive]}
-                onPress={() => updateForm('role', role)}
-              >
-                <Text style={[styles.roleText, form.role === role && styles.roleTextActive]}>
-                  {role === 'ESTUDIANTE' ? '🎓 Estudiante' : '🏪 Comercio'}
-                </Text>
-              </TouchableOpacity>
+            {ROLE_OPTIONS.map((option) => (
+              <Tag
+                key={option.value}
+                label={option.label}
+                selected={form.role === option.value}
+                icon={<Ionicons name={option.icon} size={16} color={form.role === option.value ? Colors.white : Colors.gray[600]} />}
+                onPress={() => updateForm("role", option.value)}
+              />
             ))}
           </View>
 
           <View style={styles.row}>
-            <View style={[styles.inputGroup, { flex: 1 }]}>
-              <Text style={styles.label}>Nombres *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Xavier"
-                value={form.nombres}
-                onChangeText={(v) => updateForm('nombres', v)}
-                placeholderTextColor="#9CA3AF"
-              />
+            <View style={styles.flex}>
+              <Input label="Nombres" value={form.nombres} onChangeText={(value) => updateForm("nombres", value)} error={errors.nombres} returnKeyType="next" />
             </View>
-            <View style={[styles.inputGroup, { flex: 1 }]}>
-              <Text style={styles.label}>Apellidos *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Montaño"
-                value={form.apellidos}
-                onChangeText={(v) => updateForm('apellidos', v)}
-                placeholderTextColor="#9CA3AF"
-              />
+            <View style={styles.flex}>
+              <Input label="Apellidos" value={form.apellidos} onChangeText={(value) => updateForm("apellidos", value)} error={errors.apellidos} returnKeyType="next" />
             </View>
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Correo electrónico *</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="tu@email.com"
-              value={form.email}
-              onChangeText={(v) => updateForm('email', v)}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              placeholderTextColor="#9CA3AF"
-            />
+          <View>
+            <Input label="Correo electrónico" value={form.email} onChangeText={(value) => updateForm("email", value)} error={errors.email} leftIcon={<Ionicons name="mail-outline" size={18} color={Colors.gray[400]} />} keyboardType="email-address" autoCapitalize="none" returnKeyType="next" />
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Contraseña *</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Mínimo 8 caracteres, mayúscula y número"
-              value={form.password}
-              onChangeText={(v) => updateForm('password', v)}
-              secureTextEntry
-              placeholderTextColor="#9CA3AF"
-            />
+          <View>
+            <Input label="Contraseña" value={form.password} onChangeText={(value) => updateForm("password", value)} error={errors.password} helper="Mínimo 8 caracteres." leftIcon={<Ionicons name="lock-closed-outline" size={18} color={Colors.gray[400]} />} rightIcon={<Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={18} color={Colors.gray[400]} />} onRightPress={() => setShowPassword((prev) => !prev)} secureTextEntry={!showPassword} returnKeyType="next" />
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Teléfono</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="999 999 999"
-              value={form.telefono}
-              onChangeText={(v) => updateForm('telefono', v)}
-              keyboardType="phone-pad"
-              placeholderTextColor="#9CA3AF"
-            />
+          <View>
+            <Input label="Teléfono" value={form.telefono} onChangeText={(value) => updateForm("telefono", value)} leftIcon={<Ionicons name="call-outline" size={18} color={Colors.gray[400]} />} keyboardType="phone-pad" />
           </View>
 
-          {/* Budget range */}
-          {form.role === 'ESTUDIANTE' && (
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Presupuesto por comida</Text>
-              <View style={styles.budgetContainer}>
-                {([
-                  { value: 'BAJO', label: '< S/. 5' },
-                  { value: 'MEDIO', label: 'S/. 5-15' },
-                  { value: 'ALTO', label: '> S/. 15' },
-                ] as const).map((option) => (
-                  <TouchableOpacity
-                    key={option.value}
-                    style={[styles.budgetButton, form.budgetRange === option.value && styles.budgetButtonActive]}
-                    onPress={() => updateForm('budgetRange', option.value)}
-                  >
-                    <Text style={[styles.budgetText, form.budgetRange === option.value && styles.budgetTextActive]}>
-                      {option.label}
-                    </Text>
-                  </TouchableOpacity>
+          {form.role === "ESTUDIANTE" ? (
+            <View style={styles.budgetBlock}>
+              <Text style={styles.sectionLabel}>Presupuesto por comida</Text>
+              <View style={styles.roleContainer}>
+                {BUDGET_OPTIONS.map((option) => (
+                  <Tag key={option.value} label={option.label} selected={form.budgetRange === option.value} onPress={() => updateForm("budgetRange", option.value)} />
                 ))}
               </View>
             </View>
-          )}
+          ) : null}
 
-          <TouchableOpacity
-            style={[styles.registerButton, loading && styles.registerButtonDisabled]}
-            onPress={handleRegister}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.registerButtonText}>Crear cuenta</Text>
-            )}
-          </TouchableOpacity>
-
-          <View style={styles.loginContainer}>
-            <Text style={styles.loginText}>¿Ya tienes cuenta? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-              <Text style={styles.loginLink}>Inicia sesión</Text>
-            </TouchableOpacity>
+          <View>
+            <Button label="Crear cuenta" fullWidth loading={loading} onPress={handleRegister} />
           </View>
+
+          <Pressable accessibilityRole="button" onPress={() => navigation.navigate("Login")} style={styles.loginLink}>
+            <Text style={styles.loginText}>¿Ya tienes cuenta? <Text style={styles.loginTextStrong}>Inicia sesión</Text></Text>
+          </Pressable>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -210,68 +205,99 @@ export const RegisterScreen = ({ navigation }: Props) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
-  scrollContent: { flexGrow: 1 },
+  container: {
+    flex: 1,
+    backgroundColor: Colors.white,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
   header: {
-    backgroundColor: '#F97316',
-    paddingTop: 60,
-    paddingBottom: 40,
-    paddingHorizontal: 24,
+    backgroundColor: Colors.blue[500],
+    paddingBottom: Spacing[10],
+    paddingHorizontal: Spacing[6],
+    overflow: "hidden",
   },
-  backButton: { marginBottom: 16 },
-  backText: { fontSize: 24, color: '#FFFFFF' },
-  title: { fontSize: 32, fontWeight: '800', color: '#FFFFFF' },
-  subtitle: { fontSize: 15, color: 'rgba(255,255,255,0.85)', marginTop: 4 },
-  form: { flex: 1, padding: 24, gap: 16 },
-  roleContainer: { flexDirection: 'row', gap: 12 },
-  roleButton: {
+  orangeBlock: {
+    position: "absolute",
+    width: 150,
+    height: 170,
+    borderRadius: Radius["2xl"],
+    backgroundColor: Colors.orange[500],
+    right: -48,
+    top: 40,
+    transform: [{ rotate: "18deg" }],
+  },
+  backButton: {
+    width: 42,
+    height: 42,
+    borderRadius: Radius.full,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: Spacing[5],
+  },
+  title: {
+    ...TextStyles.h1,
+    color: Colors.white,
+  },
+  subtitle: {
+    ...TextStyles.body,
+    color: Colors.white,
+    marginTop: Spacing[1],
+  },
+  form: {
     flex: 1,
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: Radius["2xl"],
+    borderTopRightRadius: Radius["2xl"],
+    padding: Spacing[6],
+    marginTop: -Spacing[6],
+    gap: Spacing[4],
   },
-  roleButtonActive: { borderColor: '#F97316', backgroundColor: '#FFF7ED' },
-  roleText: { fontSize: 14, fontWeight: '600', color: '#6B7280' },
-  roleTextActive: { color: '#F97316' },
-  row: { flexDirection: 'row', gap: 12 },
-  inputGroup: { gap: 6 },
-  label: { fontSize: 14, fontWeight: '600', color: '#374151' },
-  input: {
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 15,
-    color: '#1F2937',
-    backgroundColor: '#F9FAFB',
+  errorBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing[2],
+    backgroundColor: Colors.errorSoft,
+    borderWidth: 1,
+    borderColor: Colors.error,
+    borderRadius: Radius.lg,
+    padding: Spacing[3],
   },
-  budgetContainer: { flexDirection: 'row', gap: 8 },
-  budgetButton: {
+  errorText: {
+    ...TextStyles.label,
+    color: Colors.error,
     flex: 1,
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    borderRadius: 10,
-    paddingVertical: 10,
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
   },
-  budgetButtonActive: { borderColor: '#F97316', backgroundColor: '#FFF7ED' },
-  budgetText: { fontSize: 12, fontWeight: '600', color: '#6B7280' },
-  budgetTextActive: { color: '#F97316' },
-  registerButton: {
-    backgroundColor: '#F97316',
-    borderRadius: 16,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 8,
+  roleContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: Spacing[2],
   },
-  registerButtonDisabled: { opacity: 0.7 },
-  registerButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
-  loginContainer: { flexDirection: 'row', justifyContent: 'center' },
-  loginText: { color: '#6B7280', fontSize: 14 },
-  loginLink: { color: '#F97316', fontSize: 14, fontWeight: '700' },
+  row: {
+    flexDirection: "row",
+    gap: Spacing[3],
+  },
+  flex: {
+    flex: 1,
+  },
+  budgetBlock: {
+    gap: Spacing[2],
+  },
+  sectionLabel: {
+    ...TextStyles.label,
+    color: Colors.blue[900],
+  },
+  loginLink: {
+    alignSelf: "center",
+    padding: Spacing[2],
+  },
+  loginText: {
+    ...TextStyles.body,
+    color: Colors.gray[600],
+  },
+  loginTextStrong: {
+    color: Colors.orange[500],
+    fontWeight: "700",
+  },
 });

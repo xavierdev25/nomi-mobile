@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { Colors } from "@/theme/tokens";
 import {
   ActivityIndicator,
   Linking,
@@ -18,8 +19,8 @@ import { StudentStackParamList } from "../../navigation/types";
 import { useCartStore } from "../../store/cartStore";
 import { Aula } from "../../types";
 
-const TARIFA_SERVICIO = 1.5;
-const COMISION_FOODV = 0.5;
+const TARIFA_SERVICIO = 0.5;
+const COMISION_FOODV = 0.2;
 
 type CheckoutScreenProps = NativeStackScreenProps<
   StudentStackParamList,
@@ -51,11 +52,15 @@ export const CheckoutScreen = ({ navigation }: CheckoutScreenProps) => {
   const items = useCartStore((state) => state.items);
   const storeId = useCartStore((state) => state.storeId);
   const propina = useCartStore((state) => state.propina);
-  const clearCart = useCartStore((state) => state.clearCart);
-  const [selectedAulaId, setSelectedAulaId] = useState<number | null>(null);
+  const lastAulaId = useCartStore((state) => state.lastAulaId);
+  const setLastAulaId = useCartStore((state) => state.setLastAulaId);
+  const [selectedAulaId, setSelectedAulaId] = useState<number | null>(
+    lastAulaId,
+  );
   const [notas, setNotas] = useState("");
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [puntoEncuentro, setPuntoEncuentro] = useState<string>("puerta");
 
   const {
     data: aulas = [],
@@ -77,6 +82,21 @@ export const CheckoutScreen = ({ navigation }: CheckoutScreenProps) => {
     !selectedAulaId || isCreatingOrder || items.length === 0;
 
   const handlePagar = async () => {
+    const notasCompletas = [
+      puntoEncuentro === "puerta"
+        ? "Punto de encuentro: Puerta del aula"
+        : puntoEncuentro === "pasillo"
+          ? "Punto de encuentro: Pasillo del piso"
+          : puntoEncuentro === "entrada"
+            ? "Punto de encuentro: Entrada del pabellón"
+            : puntoEncuentro === "escaleras"
+              ? "Punto de encuentro: Escaleras del piso"
+              : "Punto de encuentro: Recepción del pabellón",
+      notas.trim(),
+    ]
+      .filter(Boolean)
+      .join(" | ");
+
     if (!selectedAulaId || !storeId) {
       return;
     }
@@ -92,7 +112,7 @@ export const CheckoutScreen = ({ navigation }: CheckoutScreenProps) => {
           productId: item.product.id,
           cantidad: item.cantidad,
         })),
-        notas: notas.trim() || undefined,
+        notas: notasCompletas || undefined,
         propina: propina > 0 ? propina : undefined,
       });
 
@@ -102,7 +122,6 @@ export const CheckoutScreen = ({ navigation }: CheckoutScreenProps) => {
         await Linking.openURL(payment.paymentUrl);
       }
 
-      clearCart();
       navigation.navigate("OrderTracking", { orderId: order.id });
     } catch (err: unknown) {
       console.error(
@@ -120,8 +139,9 @@ export const CheckoutScreen = ({ navigation }: CheckoutScreenProps) => {
           JSON.stringify(axiosErr.response.data, null, 2),
         );
       }
-
       setError(getErrorMessage(err));
+    } finally {
+      setIsCreatingOrder(false);
     }
   };
 
@@ -132,7 +152,7 @@ export const CheckoutScreen = ({ navigation }: CheckoutScreenProps) => {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Ionicons name="arrow-back" size={22} color="#1F2937" />
+          <Ionicons name="arrow-back" size={22} color={Colors.white} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Confirmar pedido</Text>
         <View style={styles.headerSpacer} />
@@ -142,6 +162,15 @@ export const CheckoutScreen = ({ navigation }: CheckoutScreenProps) => {
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
       >
+        <View style={styles.etaBanner}>
+          <Ionicons name="time-outline" size={16} color={Colors.orange[500]} />
+          <Text style={styles.etaText}>
+            Entrega estimada: <Text style={styles.etaHighlight}>15-25 min</Text>
+          </Text>
+          <View style={styles.etaDivider} />
+          <Ionicons name="location-outline" size={16} color={Colors.gray[600]} />
+          <Text style={styles.etaDelivery}>En tu aula</Text>
+        </View>
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Resumen del pedido</Text>
           {items.length === 0 ? (
@@ -177,7 +206,7 @@ export const CheckoutScreen = ({ navigation }: CheckoutScreenProps) => {
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>¿Dónde te entregamos?</Text>
           {isLoadingAulas ? (
-            <ActivityIndicator color="#F97316" style={styles.inlineLoader} />
+            <ActivityIndicator color={Colors.orange[500]} style={styles.inlineLoader} />
           ) : isAulasError ? (
             <View style={styles.aulasError}>
               <Text style={styles.errorText}>No pudimos cargar las aulas</Text>
@@ -194,10 +223,65 @@ export const CheckoutScreen = ({ navigation }: CheckoutScreenProps) => {
                 key={aula.id}
                 aula={aula}
                 selected={selectedAulaId === aula.id}
-                onPress={() => setSelectedAulaId(aula.id)}
+                isLast={aula.id === lastAulaId}
+                onPress={() => {
+                  setSelectedAulaId(aula.id);
+                  setLastAulaId(aula.id);
+                }}
               />
             ))
           )}
+        </View>
+
+        {/* Punto de encuentro */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Punto de encuentro</Text>
+          <Text style={styles.meetingSubtitle}>
+            ¿Dónde te encuentra el repartidor?
+          </Text>
+          <View style={styles.meetingOptions}>
+            {[
+              { id: "puerta", label: "🚪 Puerta del aula", icon: "puerta" },
+              { id: "pasillo", label: "🚶 Pasillo del piso", icon: "pasillo" },
+              {
+                id: "entrada",
+                label: "🏢 Entrada del pabellón",
+                icon: "entrada",
+              },
+              {
+                id: "escaleras",
+                label: "🪜 Escaleras del piso",
+                icon: "escaleras",
+              },
+              {
+                id: "recepcion",
+                label: "📋 Recepción del pabellón",
+                icon: "recepcion",
+              },
+            ].map((option) => (
+              <TouchableOpacity
+                key={option.id}
+                style={[
+                  styles.meetingOption,
+                  puntoEncuentro === option.id && styles.meetingOptionSelected,
+                ]}
+                onPress={() => setPuntoEncuentro(option.id)}
+              >
+                <Text
+                  style={[
+                    styles.meetingOptionText,
+                    puntoEncuentro === option.id &&
+                      styles.meetingOptionTextSelected,
+                  ]}
+                >
+                  {option.label}
+                </Text>
+                {puntoEncuentro === option.id && (
+                  <Ionicons name="checkmark-circle" size={16} color={Colors.orange[500]} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
         <View style={styles.card}>
@@ -207,7 +291,7 @@ export const CheckoutScreen = ({ navigation }: CheckoutScreenProps) => {
             value={notas}
             onChangeText={setNotas}
             placeholder="Ej: sin cebolla, toca la puerta del aula..."
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={Colors.gray[400]}
             multiline
             numberOfLines={3}
             textAlignVertical="top"
@@ -228,7 +312,7 @@ export const CheckoutScreen = ({ navigation }: CheckoutScreenProps) => {
           onPress={handlePagar}
         >
           {isCreatingOrder ? (
-            <ActivityIndicator color="#FFFFFF" />
+            <ActivityIndicator color={Colors.white} />
           ) : (
             <Text style={styles.payButtonText}>
               Pagar con MercadoPago {formatPrice(total)}
@@ -244,10 +328,12 @@ const AulaCard = ({
   aula,
   selected,
   onPress,
+  isLast,
 }: {
   aula: Aula;
   selected: boolean;
   onPress: () => void;
+  isLast?: boolean;
 }) => {
   const details = [
     aula.piso ? `Piso ${aula.piso}` : null,
@@ -262,13 +348,20 @@ const AulaCard = ({
       onPress={onPress}
     >
       <View style={styles.aulaTextBlock}>
-        <Text style={styles.aulaTitle}>
-          {aula.codigo} - {aula.nombre}
-        </Text>
+        <View style={styles.aulaTitleRow}>
+          <Text style={styles.aulaTitle}>
+            {aula.codigo} - {aula.nombre}
+          </Text>
+          {isLast && (
+            <View style={styles.lastAulaBadge}>
+              <Text style={styles.lastAulaText}>Última usada</Text>
+            </View>
+          )}
+        </View>
         {details ? <Text style={styles.aulaSubtitle}>{details}</Text> : null}
       </View>
       {selected && (
-        <Ionicons name="checkmark-circle" size={22} color="#F97316" />
+        <Ionicons name="checkmark-circle" size={22} color={Colors.orange[500]} />
       )}
     </TouchableOpacity>
   );
@@ -294,40 +387,41 @@ const SummaryRow = ({
 );
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F9FAFB" },
+  container: { flex: 1, backgroundColor: Colors.offWhite },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
+    backgroundColor: Colors.blue[500],
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.blue[400],
     justifyContent: "center",
     alignItems: "center",
     elevation: 2,
   },
-  headerTitle: { color: "#1F2937", fontSize: 20, fontWeight: "800" },
+  headerTitle: { color: Colors.white, fontSize: 20, fontWeight: "800" },
   headerSpacer: { width: 40 },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 16, paddingBottom: 104 },
   card: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.white,
     borderRadius: 16,
     padding: 16,
     marginBottom: 14,
     elevation: 3,
-    shadowColor: "#000",
+    shadowColor: Colors.blue[900],
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
   },
   sectionTitle: {
-    color: "#1F2937",
+    color: Colors.blue[900],
     fontSize: 17,
     fontWeight: "800",
     marginBottom: 14,
@@ -339,81 +433,139 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     gap: 12,
   },
-  itemName: { flex: 1, color: "#1F2937", fontSize: 14, fontWeight: "600" },
-  itemPrice: { color: "#1F2937", fontSize: 14, fontWeight: "800" },
-  emptyText: { color: "#6B7280", fontSize: 14 },
-  divider: { height: 1, backgroundColor: "#E5E7EB", marginVertical: 10 },
+  itemName: { flex: 1, color: Colors.blue[900], fontSize: 14, fontWeight: "600" },
+  itemPrice: { color: Colors.blue[900], fontSize: 14, fontWeight: "800" },
+  emptyText: { color: Colors.gray[600], fontSize: 14 },
+  divider: { height: 1, backgroundColor: Colors.gray[200], marginVertical: 10 },
   summaryRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 8,
   },
-  summaryLabel: { color: "#6B7280", fontSize: 14 },
-  summaryValue: { color: "#1F2937", fontSize: 14, fontWeight: "700" },
-  summaryStrong: { color: "#1F2937", fontSize: 17, fontWeight: "800" },
+  summaryLabel: { color: Colors.gray[600], fontSize: 14 },
+  summaryValue: { color: Colors.blue[900], fontSize: 14, fontWeight: "700" },
+  summaryStrong: { color: Colors.blue[900], fontSize: 17, fontWeight: "800" },
   inlineLoader: { marginVertical: 18 },
   aulasError: { alignItems: "center", paddingVertical: 12 },
-  errorText: { color: "#6B7280", fontSize: 14, textAlign: "center" },
+  errorText: { color: Colors.gray[600], fontSize: 14, textAlign: "center" },
   retryButton: {
-    backgroundColor: "#F97316",
+    backgroundColor: Colors.orange[500],
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 9,
     marginTop: 12,
   },
-  retryButtonText: { color: "#FFFFFF", fontSize: 13, fontWeight: "800" },
+  retryButtonText: { color: Colors.white, fontSize: 13, fontWeight: "800" },
   aulaCard: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#E5E7EB",
-    backgroundColor: "#FFFFFF",
+    borderColor: Colors.gray[200],
+    backgroundColor: Colors.white,
     borderRadius: 14,
     padding: 12,
     marginBottom: 10,
   },
-  aulaCardSelected: { borderColor: "#F97316", backgroundColor: "#FFF7ED" },
+  aulaCardSelected: { borderColor: Colors.orange[500], backgroundColor: Colors.gray[100] },
   aulaTextBlock: { flex: 1, paddingRight: 10 },
-  aulaTitle: { color: "#1F2937", fontSize: 14, fontWeight: "800" },
-  aulaSubtitle: { color: "#6B7280", fontSize: 12, marginTop: 4 },
+  aulaTitle: { color: Colors.blue[900], fontSize: 14, fontWeight: "800" },
+  aulaSubtitle: { color: Colors.gray[600], fontSize: 12, marginTop: 4 },
   notesInput: {
     minHeight: 92,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: Colors.gray[100],
     borderRadius: 12,
-    color: "#1F2937",
+    color: Colors.blue[900],
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
   },
   errorBox: {
-    backgroundColor: "#FEF2F2",
-    borderColor: "#FCA5A5",
+    backgroundColor: Colors.errorSoft,
+    borderColor: Colors.error,
     borderWidth: 1,
     borderRadius: 12,
     padding: 12,
     marginBottom: 14,
   },
-  errorBoxText: { color: "#B91C1C", fontSize: 13, fontWeight: "600" },
+  errorBoxText: { color: Colors.error, fontSize: 13, fontWeight: "600" },
   footer: {
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.white,
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: "#E5E7EB",
+    borderTopColor: Colors.gray[200],
   },
   payButton: {
-    backgroundColor: "#F97316",
+    backgroundColor: Colors.orange[500],
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
     minHeight: 54,
     paddingVertical: 16,
   },
-  payButtonDisabled: { backgroundColor: "#D1D5DB" },
-  payButtonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "800" },
+  payButtonDisabled: { backgroundColor: Colors.gray[300] },
+  payButtonText: { color: Colors.white, fontSize: 16, fontWeight: "800" },
+  etaBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.gray[100],
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 14,
+    gap: 6,
+  },
+  etaText: {
+    fontSize: 13,
+    color: Colors.gray[600],
+    fontWeight: "600",
+  },
+  etaHighlight: {
+    color: Colors.orange[500],
+    fontWeight: "800",
+  },
+  etaDivider: {
+    width: 1,
+    height: 14,
+    backgroundColor: Colors.orange[400],
+    marginHorizontal: 2,
+  },
+  etaDelivery: {
+    fontSize: 13,
+    color: Colors.gray[600],
+    fontWeight: "600",
+  },
+  aulaTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flexWrap: "wrap",
+  },
+  lastAulaBadge: {
+    backgroundColor: Colors.successSoft,
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  lastAulaText: { fontSize: 10, fontWeight: "700", color: Colors.success },
+  meetingSubtitle: { fontSize: 13, color: Colors.gray[600], marginBottom: 12 },
+  meetingOptions: { gap: 8 },
+  meetingOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: Colors.gray[200],
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  meetingOptionSelected: { borderColor: Colors.orange[500], backgroundColor: Colors.gray[100] },
+  meetingOptionText: { fontSize: 14, color: Colors.gray[600], fontWeight: "600" },
+  meetingOptionTextSelected: { color: Colors.orange[500] },
 });

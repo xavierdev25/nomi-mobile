@@ -1,5 +1,6 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import * as SecureStore from 'expo-secure-store';
+import { useAuthStore } from '../store/authStore';
 import { API_URL } from '../constants';
 
 export const apiClient = axios.create({
@@ -28,7 +29,6 @@ apiClient.interceptors.response.use(
     async (error: AxiosError) => {
         const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
-        // Si el token expiró (401) y no hemos reintentado aún
         if (error.response?.status === 401 && !originalRequest._retry) {
             originalRequest._retry = true;
             try {
@@ -38,14 +38,21 @@ apiClient.interceptors.response.use(
                 const response = await axios.post(`${API_URL}/auth/refresh`, { refreshToken });
                 const { accessToken, refreshToken: newRefreshToken } = response.data;
 
+                // Actualiza SecureStore
                 await SecureStore.setItemAsync('accessToken', accessToken);
                 await SecureStore.setItemAsync('refreshToken', newRefreshToken);
+
+                // Actualiza Zustand
+                const { user, setAuth } = useAuthStore.getState();
+                if (user) await setAuth(user, accessToken, newRefreshToken);
 
                 originalRequest.headers.Authorization = `Bearer ${accessToken}`;
                 return apiClient(originalRequest);
             } catch {
+                // Limpia tanto SecureStore como Zustand
                 await SecureStore.deleteItemAsync('accessToken');
                 await SecureStore.deleteItemAsync('refreshToken');
+                useAuthStore.getState().clearAuth();
             }
         }
         return Promise.reject(error);

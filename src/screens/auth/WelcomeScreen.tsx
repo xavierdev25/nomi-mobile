@@ -1,161 +1,157 @@
-import React from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Dimensions,
-  StatusBar,
-} from 'react-native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { AuthStackParamList } from '../../navigation/types';
+import React from "react";
+import { StatusBar, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Button, Card } from "@/components/ui";
+import { Colors, Radius, Spacing } from "@/theme/tokens";
+import { TextStyles } from "@/theme/typography";
+import { AuthStackParamList } from "@/navigation/types";
 
-const { width, height } = Dimensions.get('window');
-
-type Props = {
-  navigation: NativeStackNavigationProp<AuthStackParamList, 'Welcome'>;
+type WelcomeScreenProps = {
+  navigation: NativeStackNavigationProp<AuthStackParamList, "Welcome">;
 };
 
-export const WelcomeScreen = ({ navigation }: Props) => {
+const FEATURES = [
+  { icon: "flash-outline" as const, title: "Entrega rápida", desc: "Recibe tu pedido en el aula." },
+  { icon: "sparkles-outline" as const, title: "IA FoodV", desc: "Recomendaciones según tus gustos." },
+  { icon: "wallet-outline" as const, title: "Gana dinero", desc: "Reparte dentro del campus." },
+];
+
+export const WelcomeScreen = ({ navigation }: WelcomeScreenProps) => {
+  const insets = useSafeAreaInsets();
+
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#F97316" />
+      <StatusBar barStyle="light-content" backgroundColor={Colors.blue[500]} />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.logoContainer}>
-          <Text style={styles.logoText}>🍔</Text>
+      <View style={[styles.header, { paddingTop: insets.top + Spacing[8] }]}>
+        <View style={styles.orangeBlock} />
+        <View style={styles.whiteCircle} />
+
+        <View style={styles.logoBox}>
+          <Text style={styles.logoMark}>F</Text>
         </View>
-        <Text style={styles.appName}>FoodV</Text>
-        <Text style={styles.tagline}>Delivery universitario rápido{'\n'}directo a tu aula</Text>
+        <View>
+          <Text style={styles.appName}>FoodV</Text>
+          <Text style={styles.tagline}>Delivery universitario directo a tu aula</Text>
+        </View>
       </View>
 
-      {/* Features */}
-      <View style={styles.featuresContainer}>
-        <FeatureItem emoji="⚡" title="Entrega rápida" desc="En minutos a tu aula" />
-        <FeatureItem emoji="🤖" title="IA personalizada" desc="Recomendaciones según tu gusto" />
-        <FeatureItem emoji="💰" title="Gana dinero" desc="Conviértete en repartidor" />
-      </View>
+      <View style={[styles.body, { paddingBottom: insets.bottom + Spacing[5] }]}>
+        {FEATURES.map((feature) => (
+          <Card key={feature.title} variant="flat" style={styles.featureCard}>
+            <View style={styles.featureIcon}>
+              <Ionicons name={feature.icon} size={22} color={Colors.orange[500]} />
+            </View>
+            <View style={styles.featureText}>
+              <Text style={styles.featureTitle}>{feature.title}</Text>
+              <Text style={styles.featureDesc}>{feature.desc}</Text>
+            </View>
+          </Card>
+        ))}
 
-      {/* Buttons */}
-      <View style={styles.buttonsContainer}>
-        <TouchableOpacity
-          style={styles.primaryButton}
-          onPress={() => navigation.navigate('Register')}
-        >
-          <Text style={styles.primaryButtonText}>Comenzar ahora</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.secondaryButton}
-          onPress={() => navigation.navigate('Login')}
-        >
-          <Text style={styles.secondaryButtonText}>Ya tengo cuenta</Text>
-        </TouchableOpacity>
+        <View style={styles.actions}>
+          <Button label="Comenzar ahora" fullWidth onPress={() => navigation.navigate("Register")} />
+          <Button label="Ya tengo cuenta" fullWidth variant="outline" onPress={() => navigation.navigate("Login")} />
+        </View>
       </View>
     </View>
   );
 };
 
-const FeatureItem = ({ emoji, title, desc }: { emoji: string; title: string; desc: string }) => (
-  <View style={styles.featureItem}>
-    <Text style={styles.featureEmoji}>{emoji}</Text>
-    <View>
-      <Text style={styles.featureTitle}>{title}</Text>
-      <Text style={styles.featureDesc}>{desc}</Text>
-    </View>
-  </View>
-);
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F97316',
+    backgroundColor: Colors.blue[500],
   },
   header: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingTop: 60,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: Spacing[6],
+    overflow: "hidden",
   },
-  logoContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
+  orangeBlock: {
+    position: "absolute",
+    width: 180,
+    height: 220,
+    borderRadius: Radius["2xl"],
+    backgroundColor: Colors.orange[500],
+    right: -56,
+    top: 80,
+    transform: [{ rotate: "18deg" }],
   },
-  logoText: {
-    fontSize: 48,
+  whiteCircle: {
+    position: "absolute",
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: Colors.white,
+    opacity: 0.06,
+    left: -80,
+    bottom: 20,
+  },
+  logoBox: {
+    width: 104,
+    height: 104,
+    borderRadius: Radius["2xl"],
+    backgroundColor: Colors.white,
+    borderWidth: 3,
+    borderColor: Colors.orange[500],
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: Spacing[5],
+  },
+  logoMark: {
+    ...TextStyles.display,
+    color: Colors.orange[500],
   },
   appName: {
-    fontSize: 48,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: -1,
+    ...TextStyles.display,
+    color: Colors.white,
+    textAlign: "center",
   },
   tagline: {
-    fontSize: 16,
-    color: 'rgba(255,255,255,0.85)',
-    textAlign: 'center',
-    marginTop: 8,
-    lineHeight: 24,
+    ...TextStyles.body,
+    color: Colors.white,
+    textAlign: "center",
+    marginTop: Spacing[2],
   },
-  featuresContainer: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    padding: 32,
-    gap: 20,
+  body: {
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: Radius["2xl"],
+    borderTopRightRadius: Radius["2xl"],
+    paddingHorizontal: Spacing[6],
+    paddingTop: Spacing[6],
+    gap: Spacing[3],
   },
-  featureItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
+  featureCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing[3],
+    backgroundColor: Colors.offWhite,
   },
-  featureEmoji: {
-    fontSize: 32,
-    width: 48,
-    textAlign: 'center',
+  featureIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: Radius.lg,
+    backgroundColor: Colors.white,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  featureText: {
+    flex: 1,
   },
   featureTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1F2937',
+    ...TextStyles.bodyStrong,
   },
   featureDesc: {
-    fontSize: 13,
-    color: '#6B7280',
-    marginTop: 2,
+    ...TextStyles.body,
+    color: Colors.gray[600],
   },
-  buttonsContainer: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-    gap: 12,
-  },
-  primaryButton: {
-    backgroundColor: '#F97316',
-    borderRadius: 16,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  primaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  secondaryButton: {
-    backgroundColor: '#F3F4F6',
-    borderRadius: 16,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  secondaryButtonText: {
-    color: '#1F2937',
-    fontSize: 16,
-    fontWeight: '600',
+  actions: {
+    gap: Spacing[3],
+    marginTop: Spacing[2],
   },
 });
