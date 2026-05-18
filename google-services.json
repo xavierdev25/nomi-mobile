@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "771708420746",
+    "project_id": "nomi-60f75",
+    "storage_bucket": "nomi-60f75.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:771708420746:android:38af0be095410b7adba373",
+        "android_client_info": {
+          "package_name": "com.foodv.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDH0cc4neZu3E7hsH99TQW76vHsvO7rysM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
