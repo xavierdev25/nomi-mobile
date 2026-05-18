@@ -12,7 +12,6 @@ interface AuthState {
     setAuth: (user: User, accessToken: string, refreshToken: string) => Promise<void>;
     clearAuth: () => Promise<void>;
     setUser: (user: User) => void;
-    loadFromStorage: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -35,18 +34,4 @@ export const useAuthStore = create<AuthState>((set) => ({
     },
 
     setUser: (user) => set({ user }),
-
-    loadFromStorage: async () => {
-        try {
-            const accessToken = await SecureStore.getItemAsync('accessToken');
-            const refreshToken = await SecureStore.getItemAsync('refreshToken');
-            if (accessToken && refreshToken) {
-                set({ accessToken, refreshToken, isLoading: false });
-            } else {
-                set({ isLoading: false });
-            }
-        } catch {
-            set({ isLoading: false });
-        }
-    },
 }));

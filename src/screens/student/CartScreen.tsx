@@ -2,7 +2,6 @@ import React, { useMemo, useState } from "react";
 import { Colors } from "@/theme/tokens";
 import {
   Alert,
-  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { CommonActions } from "@react-navigation/native";
@@ -17,17 +17,15 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { StudentStackParamList } from "../../navigation/types";
 import { useCartStore } from "../../store";
 import { CartItem } from "../../types";
+import { TARIFA_SERVICIO, COMISION_FOODV, MAX_TIP_RATIO } from "../../constants";
+import { SummaryRow } from "../../components/ui/SummaryRow";
+import { formatCategory } from "../../utils";
 
 const PROPINAS_PRESET = [0, 1, 2, 5];
-const TARIFA_SERVICIO = 0.5;
-const COMISION_FOODV = 0.2;
 
 type CartScreenProps = NativeStackScreenProps<StudentStackParamList, "Cart">;
 
 const formatPrice = (amount: number) => `S/ ${amount.toFixed(2)}`;
-
-const formatCategory = (category: string) =>
-  category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
 
 export const CartScreen = ({ navigation }: CartScreenProps) => {
   const items = useCartStore((state) => state.items);
@@ -65,7 +63,7 @@ export const CartScreen = ({ navigation }: CartScreenProps) => {
       Alert.alert("Propina inválida", "Ingresa un monto válido mayor a 0.");
       return;
     }
-    const maxPropina = subtotal * 0.5;
+    const maxPropina = subtotal * MAX_TIP_RATIO;
     if (amount > maxPropina) {
       Alert.alert(
         "Propina muy alta",
@@ -80,13 +78,6 @@ export const CartScreen = ({ navigation }: CartScreenProps) => {
     setShowCustom(false);
     setCustomPropina("");
     setPropina(amount);
-  };
-
-  const handlePropina = (value: string) => {
-    const parsed = Number(value.replace(",", "."));
-    if (!isNaN(parsed) && parsed >= 0) {
-      setPropina(parsed);
-    }
   };
 
   return (
@@ -207,7 +198,7 @@ export const CartScreen = ({ navigation }: CartScreenProps) => {
               )}
               {showCustom && (
                 <Text style={styles.tipHint}>
-                  Máximo: 50% del subtotal (S/ {(subtotal * 0.5).toFixed(2)})
+                  Máximo: 50% del subtotal (S/ {(subtotal * MAX_TIP_RATIO).toFixed(2)})
                 </Text>
               )}
             </View>
@@ -227,7 +218,7 @@ export const CartScreen = ({ navigation }: CartScreenProps) => {
               <SummaryRow
                 label="Total"
                 value={formatPrice(totalFinal)}
-                strong
+                bold
               />
             </View>
           </ScrollView>
@@ -280,7 +271,8 @@ const CartItemCard = ({
         <Image
           source={{ uri: item.product.imagenUrl }}
           style={styles.itemImage}
-          resizeMode="cover"
+          contentFit="cover"
+          transition={200}
           onError={() => setImageError(true)}
         />
       ) : (
@@ -331,25 +323,6 @@ const CartItemCard = ({
     </View>
   );
 };
-
-const SummaryRow = ({
-  label,
-  value,
-  strong,
-}: {
-  label: string;
-  value: string;
-  strong?: boolean;
-}) => (
-  <View style={styles.summaryRow}>
-    <Text style={[styles.summaryLabel, strong && styles.summaryStrong]}>
-      {label}
-    </Text>
-    <Text style={[styles.summaryValue, strong && styles.summaryStrong]}>
-      {value}
-    </Text>
-  </View>
-);
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.offWhite },
@@ -505,15 +478,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
     elevation: 3,
   },
-  summaryRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  summaryLabel: { color: Colors.gray[600], fontSize: 14 },
-  summaryValue: { color: Colors.blue[900], fontSize: 14, fontWeight: "700" },
-  summaryStrong: { color: Colors.blue[900], fontSize: 17, fontWeight: "800" },
   divider: { height: 1, backgroundColor: Colors.gray[200], marginVertical: 8 },
   emptyContainer: {
     flex: 1,

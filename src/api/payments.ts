@@ -4,7 +4,7 @@ import { PaymentResponse } from '../types';
 export const paymentsApi = {
   create: async (orderId: number): Promise<PaymentResponse> => {
     try {
-      const response = await apiClient.post('/payments', { orderId });
+      const response = await apiClient.post('/payments', { orderId, backUrl: 'foodv://payment-result' });
       return response.data;
     } catch (error: unknown) {
       if (

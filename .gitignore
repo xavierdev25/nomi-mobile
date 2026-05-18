@@ -32,6 +32,13 @@ yarn-error.*
 
 # local env files
 .env*.local
+.env
+.env.local
+.env.production
+
+# Firebase credentials — commit the .example variants instead
+google-services.json
+GoogleService-Info.plist
 
 # typescript
 *.tsbuildinfo
@@ -39,3 +46,5 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+skills-lock.json
+.agents

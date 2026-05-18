@@ -1,0 +1,12 @@
+appId: com.foodv.app
+---
+- launchApp
+- assertVisible: "Iniciar sesión"
+- tapOn:
+    id: "email-input"
+- inputText: "estudiante@foodv.pe"
+- tapOn:
+    id: "password-input"
+- inputText: "Test1234!"
+- tapOn: "Iniciar sesión"
+- assertVisible: "¿Qué se te antoja hoy?"

@@ -10,10 +10,10 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import * as SecureStore from "expo-secure-store";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { authApi } from "@/api";
+import { getApiErrorMessage } from "@/utils/apiError";
 import { Button, Input, Tag } from "@/components/ui";
 import { AuthStackParamList } from "@/navigation/types";
 import { useAuthStore } from "@/store";
@@ -100,21 +100,10 @@ export const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
     try {
       await authApi.register(form);
       const authResponse = await authApi.login({ email: form.email.trim(), password: form.password });
-      await SecureStore.setItemAsync("accessToken", authResponse.accessToken);
-      await SecureStore.setItemAsync("refreshToken", authResponse.refreshToken);
       const user = await authApi.me();
       await setAuth(user, authResponse.accessToken, authResponse.refreshToken);
     } catch (error: unknown) {
-      const message =
-        typeof error === "object" &&
-        error !== null &&
-        "response" in error &&
-        typeof error.response === "object" &&
-        error.response !== null &&
-        "data" in error.response
-          ? "No pudimos crear tu cuenta. Revisa los datos."
-          : "Error inesperado. Intenta de nuevo.";
-      setErrors({ global: message });
+      setErrors({ global: getApiErrorMessage(error, "No pudimos crear tu cuenta. Revisa los datos.") });
       setShakeKey((prev) => prev + 1);
     } finally {
       setLoading(false);

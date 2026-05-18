@@ -2,7 +2,7 @@ import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { RootNavigator } from "./src/navigation";
+import { RootNavigator, linking } from "./src/navigation";
 import { useNotifications } from "./src/hooks/useNotifications";
 import { useFoodVFonts } from "./src/theme/typography";
 
@@ -24,7 +24,7 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
-        <NavigationContainer>
+        <NavigationContainer linking={linking}>
           <RootNavigator />
         </NavigationContainer>
       </QueryClientProvider>

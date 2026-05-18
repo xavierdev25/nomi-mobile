@@ -16,6 +16,7 @@ import { ProfileScreen } from "../screens/student/ProfileScreen";
 import { StoreDetailScreen } from "../screens/student/StoreDetailScreen";
 import { FavoriteProductsScreen } from "../screens/student/FavoriteProductsScreen";
 import { FavoriteStoresScreen } from "../screens/student/FavoriteStoresScreen";
+import { RecommendationsScreen } from "../screens/student/RecommendationsScreen";
 import { Colors } from "@/theme/tokens";
 
 const Tab = createBottomTabNavigator<StudentTabParamList>();
@@ -80,5 +81,6 @@ export const StudentNavigator = () => (
     <Stack.Screen name="StoreDetail" component={StoreDetailScreen} />
     <Stack.Screen name="FavoriteProducts" component={FavoriteProductsScreen} />
     <Stack.Screen name="FavoriteStores" component={FavoriteStoresScreen} />
+    <Stack.Screen name="Recommendations" component={RecommendationsScreen} />
   </Stack.Navigator>
 );

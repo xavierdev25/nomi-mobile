@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useReducer } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { productsApi } from '../api';
 import { Product } from '../types';
@@ -11,11 +11,37 @@ type ProductSearchParams = {
   soloDisponibles: boolean;
 };
 
+type SearchState = {
+  allProducts: Product[];
+  currentPage: number;
+};
+
+type SearchAction =
+  | { type: 'NEXT_PAGE' }
+  | { type: 'RESET' }
+  | { type: 'SET_PRODUCTS'; products: Product[]; replace: boolean };
+
+function searchReducer(state: SearchState, action: SearchAction): SearchState {
+  switch (action.type) {
+    case 'NEXT_PAGE':
+      return { ...state, currentPage: state.currentPage + 1 };
+    case 'RESET':
+      return { allProducts: [], currentPage: 0 };
+    case 'SET_PRODUCTS':
+      return {
+        ...state,
+        allProducts: action.replace ? action.products : [...state.allProducts, ...action.products],
+      };
+  }
+}
+
 export const useProductSearch = ({
   nombre, categoria, precioMin, precioMax, soloDisponibles,
 }: ProductSearchParams) => {
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
-  const [currentPage, setCurrentPage] = useState(0);
+  const [{ allProducts, currentPage }, dispatch] = useReducer(searchReducer, {
+    allProducts: [],
+    currentPage: 0,
+  });
 
   const { data, isFetching, isError, refetch } = useQuery({
     queryKey: ['products', 'search', { nombre, categoria, precioMin, precioMax, soloDisponibles, currentPage }],
@@ -34,22 +60,17 @@ export const useProductSearch = ({
 
   useEffect(() => {
     if (!data) return;
-    if (data.currentPage === 0) {
-      setAllProducts(data.content);
-    } else {
-      setAllProducts((prev) => [...prev, ...data.content]);
-    }
+    dispatch({ type: 'SET_PRODUCTS', products: data.content, replace: data.currentPage === 0 });
   }, [data]);
 
   const loadNextPage = useCallback(() => {
     if (data && currentPage < data.totalPages - 1) {
-      setCurrentPage((prev) => prev + 1);
+      dispatch({ type: 'NEXT_PAGE' });
     }
   }, [currentPage, data]);
 
   const resetSearch = useCallback(() => {
-    setCurrentPage(0);
-    setAllProducts([]);
+    dispatch({ type: 'RESET' });
   }, []);
 
   return {

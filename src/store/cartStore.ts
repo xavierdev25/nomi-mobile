@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { CartItem, Product } from '../types';
+import { TARIFA_SERVICIO, COMISION_FOODV } from '../constants';
 
 interface CartState {
     items: CartItem[];
@@ -69,7 +70,7 @@ export const useCartStore = create<CartState>((set, get) => ({
     getTotal: () => {
         const { items, propina } = get();
         const subtotal = items.reduce((sum, i) => sum + i.product.precio * i.cantidad, 0);
-        return subtotal + propina + 0.5 + 0.2;
+        return subtotal + propina + TARIFA_SERVICIO + COMISION_FOODV;
     },
 
     getItemCount: () => get().items.reduce((sum, i) => sum + i.cantidad, 0),

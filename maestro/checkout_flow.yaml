@@ -1,0 +1,13 @@
+appId: com.foodv.app
+---
+- launchApp
+- assertVisible: "¿Qué se te antoja hoy?"
+- tapOn: "🍽️ Disponible ahora"
+- assertVisible: "Agregar al carrito"
+- tapOn: "Agregar al carrito"
+- tapOn: "Ver carrito"
+- assertVisible: "Mi carrito"
+- assertVisible: "Ir a pagar"
+- tapOn: "Ir a pagar"
+- assertVisible: "Confirmar pedido"
+- assertVisible: "¿Dónde te entregamos?"

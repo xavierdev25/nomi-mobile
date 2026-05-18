@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { LinkingOptions } from '@react-navigation/native';
 import { RootStackParamList } from './types';
 import { useAuthStore } from '../store';
 import { AuthNavigator } from './AuthNavigator';
@@ -12,6 +13,28 @@ import { authApi } from '../api';
 import { Colors } from '@/theme/tokens';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+
+const ROLE_NAVIGATOR: Record<string, React.ComponentType<object>> = {
+  COMERCIO: StoreNavigator,
+  REPARTIDOR: DeliveryNavigator,
+  ESTUDIANTE: StudentNavigator,
+  ADMIN: StudentNavigator,
+};
+
+export const linking: LinkingOptions<RootStackParamList> = {
+  prefixes: ['foodv://'],
+  config: {
+    screens: {
+      Student: {
+        path: '',
+        screens: {
+          StudentTabs: 'home',
+          OrderTracking: 'order/:orderId',
+        },
+      },
+    },
+  },
+};
 
 export const RootNavigator = () => {
   const { isAuthenticated, isLoading, user, setAuth, clearAuth } = useAuthStore();
@@ -51,12 +74,11 @@ export const RootNavigator = () => {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {!isAuthenticated || !user ? (
         <Stack.Screen name="Auth" component={AuthNavigator} />
-      ) : user.role === 'COMERCIO' ? (
-        <Stack.Screen name="Store" component={StoreNavigator} />
-      ) : user.role === 'REPARTIDOR' ? (
-        <Stack.Screen name="Delivery" component={DeliveryNavigator} />
       ) : (
-        <Stack.Screen name="Student" component={StudentNavigator} />
+        <Stack.Screen
+          name="Student"
+          component={ROLE_NAVIGATOR[user.role] ?? StudentNavigator}
+        />
       )}
     </Stack.Navigator>
   );

@@ -33,7 +33,7 @@ export interface RegisterRequest {
     email: string;
     password: string;
     telefono?: string;
-    role: string;
+    role: 'ESTUDIANTE' | 'REPARTIDOR' | 'COMERCIO';
     preferences?: string[];
     restrictions?: string[];
     budgetRange?: string;
@@ -87,7 +87,7 @@ export interface Order {
     propina?: number;
     tarifaServicio?: number;
     comisionFoodv?: number;
-    status: string;
+    status: 'PENDIENTE' | 'PREPARANDO' | 'LISTO_PARA_RECOGER' | 'EN_CAMINO' | 'ENTREGADO' | 'CANCELADO';
     statusDescripcion?: string;
     notas?: string;
     motivoCancelacion?: string;

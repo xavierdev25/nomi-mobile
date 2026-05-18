@@ -7,108 +7,20 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
-  Image,
 } from "react-native";
+import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import { storesApi, productsApi } from "../../api";
 import { StudentStackParamList } from "../../navigation/types";
-import { Product, Store } from "../../types";
-import { formatCurrency } from "../../utils";
+import { isStoreOpen } from "../../utils";
 import { useStoreFavorite } from "../../hooks/useFavorite";
 import { ratingsApi } from "../../api/ratings";
+import { ProductCard } from "../../components/ui/ProductCard";
 
 type Props = NativeStackScreenProps<StudentStackParamList, "StoreDetail">;
-
-const ProductCard = ({
-  product,
-  onPress,
-}: {
-  product: Product;
-  onPress: () => void;
-}) => {
-  const [imageError, setImageError] = React.useState(false);
-  const emoji =
-    product.categoria === "COMIDA"
-      ? "🍽️"
-      : product.categoria === "BEBIDA"
-        ? "🥤"
-        : product.categoria === "SNACK"
-          ? "🍿"
-          : product.categoria === "POSTRE"
-            ? "🍰"
-            : "🛍️";
-
-  return (
-    <TouchableOpacity
-      style={styles.productCard}
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
-      {product.imagenUrl && !imageError ? (
-        <Image
-          source={{ uri: product.imagenUrl }}
-          style={styles.productImage}
-          resizeMode="cover"
-          onError={() => setImageError(true)}
-        />
-      ) : (
-        <View style={styles.productImageFallback}>
-          <Text style={styles.productEmoji}>{emoji}</Text>
-        </View>
-      )}
-      <View style={styles.productInfo}>
-        <Text style={styles.productName} numberOfLines={2}>
-          {product.nombre}
-        </Text>
-        {product.descripcion ? (
-          <Text style={styles.productDesc} numberOfLines={2}>
-            {product.descripcion}
-          </Text>
-        ) : null}
-        <View style={styles.productFooter}>
-          <Text style={styles.productPrice}>
-            {formatCurrency(product.precio)}
-          </Text>
-          <View
-            style={[
-              styles.availBadge,
-              { backgroundColor: product.disponible ? Colors.successSoft : Colors.errorSoft },
-            ]}
-          >
-            <Text
-              style={[
-                styles.availText,
-                { color: product.disponible ? Colors.success : Colors.error },
-              ]}
-            >
-              {product.disponible ? "Disponible" : "Agotado"}
-            </Text>
-          </View>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-};
-
-const isStoreOpen = (store: Store): boolean => {
-  if (!store.activo) return false;
-  if (!store.horarioApertura || !store.horarioCierre) return store.activo;
-
-  const now = new Date();
-  const limaOffset = -5 * 60; // UTC-5
-  const utcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
-  const limaMinutes = (utcMinutes + limaOffset + 1440) % 1440;
-
-  const [openH, openM] = store.horarioApertura.split(":").map(Number);
-  const [closeH, closeM] = store.horarioCierre.split(":").map(Number);
-  const openMinutes = openH * 60 + openM;
-  const closeMinutes = closeH * 60 + closeM;
-
-  return limaMinutes >= openMinutes && limaMinutes < closeMinutes;
-};
 
 export const StoreDetailScreen = ({ navigation, route }: Props) => {
   const { storeId } = route.params;
@@ -181,6 +93,8 @@ export const StoreDetailScreen = ({ navigation, route }: Props) => {
                     <Image
                       source={{ uri: store.imagenUrl }}
                       style={styles.storeImage}
+                      contentFit="cover"
+                      transition={200}
                     />
                   ) : (
                     <Ionicons
@@ -195,7 +109,6 @@ export const StoreDetailScreen = ({ navigation, route }: Props) => {
                   <Text style={styles.storeDesc}>{store.descripcion}</Text>
                 ) : null}
 
-                {/* ETA + Status */}
                 <View style={styles.storeMeta}>
                   <View style={styles.storeMetaBadge}>
                     <Ionicons name="time-outline" size={14} color={Colors.orange[500]} />
@@ -259,8 +172,7 @@ export const StoreDetailScreen = ({ navigation, route }: Props) => {
                       <View style={styles.storeMetaBadge}>
                         <Ionicons name="star" size={14} color={Colors.warning} />
                         <Text style={styles.storeMetaText}>
-                          {storeRating.promedio.toFixed(1)} ({storeRating.total}
-                          )
+                          {storeRating.promedio.toFixed(1)} ({storeRating.total})
                         </Text>
                       </View>
                     </>
@@ -278,6 +190,10 @@ export const StoreDetailScreen = ({ navigation, route }: Props) => {
           renderItem={({ item }) => (
             <ProductCard
               product={item}
+              variant="list"
+              showDescription
+              showAvailabilityBadge
+              style={styles.productCard}
               onPress={() =>
                 navigation.navigate("ProductDetail", { productId: item.id })
               }
@@ -323,7 +239,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginHorizontal: 8,
   },
-  headerSpacer: { width: 40 },
   centered: {
     flex: 1,
     alignItems: "center",
@@ -368,7 +283,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 8,
   },
-  storePhoneText: { fontSize: 13, color: Colors.gray[600] },
   divider: {
     height: 1,
     backgroundColor: Colors.gray[200],
@@ -382,39 +296,9 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   productCard: {
-    flexDirection: "row",
-    backgroundColor: Colors.white,
-    borderRadius: 16,
     marginHorizontal: 16,
     marginBottom: 12,
-    overflow: "hidden",
-    elevation: 2,
-    shadowColor: Colors.blue[900],
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
   },
-  productImage: { width: 100, height: 100 },
-  productImageFallback: {
-    width: 100,
-    height: 100,
-    backgroundColor: Colors.gray[100],
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  productEmoji: { fontSize: 36 },
-  productInfo: { flex: 1, padding: 12, justifyContent: "space-between" },
-  productName: { fontSize: 14, fontWeight: "700", color: Colors.blue[900] },
-  productDesc: { fontSize: 12, color: Colors.gray[600], marginTop: 4, lineHeight: 16 },
-  productFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 8,
-  },
-  productPrice: { fontSize: 16, fontWeight: "800", color: Colors.orange[500] },
-  availBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  availText: { fontSize: 10, fontWeight: "700" },
   emptyText: { fontSize: 14, color: Colors.gray[600], textAlign: "center" },
   storeMeta: {
     flexDirection: "row",
@@ -426,26 +310,10 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     gap: 8,
   },
-  storeMetaBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  storeMetaText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: Colors.gray[600],
-  },
-  storeMetaDivider: {
-    width: 1,
-    height: 14,
-    backgroundColor: Colors.gray[200],
-  },
-  statusDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-  },
+  storeMetaBadge: { flexDirection: "row", alignItems: "center", gap: 4 },
+  storeMetaText: { fontSize: 12, fontWeight: "700", color: Colors.gray[600] },
+  storeMetaDivider: { width: 1, height: 14, backgroundColor: Colors.gray[200] },
+  statusDot: { width: 7, height: 7, borderRadius: 4 },
   favoriteButton: {
     width: 40,
     height: 40,

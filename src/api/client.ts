@@ -11,7 +11,17 @@ export const apiClient = axios.create({
     },
 });
 
-// Request interceptor — agrega el token JWT automáticamente
+let isRefreshing = false;
+let failedQueue: Array<{ resolve: (token: string) => void; reject: (err: unknown) => void }> = [];
+
+const processQueue = (error: unknown, token: string | null = null) => {
+    failedQueue.forEach(({ resolve, reject }) => {
+        if (error) reject(error);
+        else resolve(token!);
+    });
+    failedQueue = [];
+};
+
 apiClient.interceptors.request.use(
     async (config: InternalAxiosRequestConfig) => {
         const token = await SecureStore.getItemAsync('accessToken');
@@ -23,14 +33,26 @@ apiClient.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-// Response interceptor — maneja errores globalmente
 apiClient.interceptors.response.use(
     (response) => response,
     async (error: AxiosError) => {
         const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
         if (error.response?.status === 401 && !originalRequest._retry) {
+            if (isRefreshing) {
+                return new Promise<string>((resolve, reject) => {
+                    failedQueue.push({ resolve, reject });
+                })
+                    .then((token) => {
+                        originalRequest.headers.Authorization = `Bearer ${token}`;
+                        return apiClient(originalRequest);
+                    })
+                    .catch((err) => Promise.reject(err));
+            }
+
             originalRequest._retry = true;
+            isRefreshing = true;
+
             try {
                 const refreshToken = await SecureStore.getItemAsync('refreshToken');
                 if (!refreshToken) throw new Error('No refresh token');
@@ -38,21 +60,18 @@ apiClient.interceptors.response.use(
                 const response = await axios.post(`${API_URL}/auth/refresh`, { refreshToken });
                 const { accessToken, refreshToken: newRefreshToken } = response.data;
 
-                // Actualiza SecureStore
-                await SecureStore.setItemAsync('accessToken', accessToken);
-                await SecureStore.setItemAsync('refreshToken', newRefreshToken);
-
-                // Actualiza Zustand
                 const { user, setAuth } = useAuthStore.getState();
                 if (user) await setAuth(user, accessToken, newRefreshToken);
 
+                processQueue(null, accessToken);
                 originalRequest.headers.Authorization = `Bearer ${accessToken}`;
                 return apiClient(originalRequest);
-            } catch {
-                // Limpia tanto SecureStore como Zustand
-                await SecureStore.deleteItemAsync('accessToken');
-                await SecureStore.deleteItemAsync('refreshToken');
-                useAuthStore.getState().clearAuth();
+            } catch (err) {
+                processQueue(err);
+                await useAuthStore.getState().clearAuth();
+                return Promise.reject(err);
+            } finally {
+                isRefreshing = false;
             }
         }
         return Promise.reject(error);

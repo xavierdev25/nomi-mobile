@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Colors } from "@/theme/tokens";
 import {
   View,
@@ -14,6 +14,7 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import { StudentStackParamList } from "../../navigation/types";
 import { useAuthStore } from "../../store/authStore";
+import { useCartStore } from "../../store/cartStore";
 import { usePaymentStatus } from "../../hooks/usePaymentStatus";
 import { ordersApi } from "../../api";
 
@@ -118,10 +119,17 @@ const ProgressStep = ({
 export const OrderTrackingScreen = ({ navigation, route }: Props) => {
   const { orderId } = route.params;
   const user = useAuthStore((state) => state.user);
+  const clearCart = useCartStore((state) => state.clearCart);
   const { status: paymentStatus, loading: paymentLoading } = usePaymentStatus(
     orderId,
     user?.id ?? 0,
   );
+
+  useEffect(() => {
+    if (paymentStatus === 'APROBADO') {
+      clearCart();
+    }
+  }, [paymentStatus, clearCart]);
 
   const { data: order } = useQuery({
     queryKey: ["order", orderId],

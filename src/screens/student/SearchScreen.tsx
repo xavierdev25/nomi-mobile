@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Image,
   ScrollView,
   StyleSheet,
   Switch,
@@ -18,11 +17,10 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import { useProductSearch } from "../../hooks/useProductSearch";
 import { StudentStackParamList } from "../../navigation/types";
-import { useCartStore } from "../../store";
-import { Product, Store } from "../../types";
-import { formatCurrency } from "../../utils";
 import { storesApi } from "../../api";
 import { Colors } from "@/theme/tokens";
+import { CartHeaderButton } from "../../components/ui/CartHeaderButton";
+import { ProductCard, StoreCard } from "../../components/ui";
 
 type SearchMode = "productos" | "tiendas";
 
@@ -34,9 +32,6 @@ const CATEGORIAS: { label: string; value: string | null }[] = [
   { label: "Postre", value: "POSTRE" },
   { label: "Otro", value: "OTRO" },
 ];
-
-const formatCategory = (category: string) =>
-  category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
 
 const parsePrice = (value: string) => {
   const normalized = value.replace(",", ".").trim();
@@ -71,7 +66,7 @@ export const SearchScreen = () => {
     resetSearch,
     refetch: refetchProducts,
   } = useProductSearch({
-    nombre: debouncedSearch, // ← sin condición de modo
+    nombre: debouncedSearch,
     categoria: selectedCategory,
     precioMin,
     precioMax,
@@ -207,7 +202,6 @@ export const SearchScreen = () => {
         <CartHeaderButton onPress={() => navigation.navigate("Cart")} />
       </View>
 
-      {/* Toggle Productos / Tiendas */}
       <View style={styles.toggleContainer}>
         <TouchableOpacity
           style={[
@@ -253,7 +247,6 @@ export const SearchScreen = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Search bar */}
       <View style={styles.searchRow}>
         <View style={styles.searchInputContainer}>
           <Ionicons name="search-outline" size={20} color={Colors.gray[600]} />
@@ -300,12 +293,8 @@ export const SearchScreen = () => {
         )}
       </View>
 
-      {/* Filtros (solo en modo productos) */}
       {mode === "productos" && showFilters ? (
-        <View
-          key="filters"
-          style={styles.filtersPanel}
-        >
+        <View key="filters" style={styles.filtersPanel}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesScroll}>
             {CATEGORIAS.map((category) => {
               const selected = selectedCategory === category.value;
@@ -381,141 +370,10 @@ export const SearchScreen = () => {
   );
 };
 
-const CartHeaderButton = ({ onPress }: { onPress: () => void }) => {
-  const items = useCartStore((state) => state.items);
-  const getItemCount = useCartStore((state) => state.getItemCount);
-  const itemCount = getItemCount();
-  return (
-    <TouchableOpacity style={styles.cartHeaderButton} onPress={onPress}>
-      <Ionicons name="cart-outline" size={22} color={Colors.orange[500]} />
-      {items.length > 0 && (
-        <View style={styles.cartBadge}>
-          <Text style={styles.cartBadgeText}>{itemCount}</Text>
-        </View>
-      )}
-    </TouchableOpacity>
-  );
-};
-
-const ProductCard = ({
-  product,
-  onPress,
-}: {
-  product: Product;
-  onPress: () => void;
-}) => {
-  const [imageError, setImageError] = useState(false);
-  const showImage = product.imagenUrl && !imageError;
-  return (
-    <TouchableOpacity
-      style={styles.productCard}
-      onPress={onPress}
-      activeOpacity={0.85}
-    >
-      {showImage ? (
-        <Image
-          source={{ uri: product.imagenUrl }}
-          style={styles.productImage}
-          resizeMode="cover"
-          onError={() => setImageError(true)}
-        />
-      ) : (
-        <View style={styles.productImageFallback}>
-          <Ionicons name="image-outline" size={40} color={Colors.gray[400]} />
-        </View>
-      )}
-      <View style={styles.productInfo}>
-        <Text style={styles.productName} numberOfLines={2}>
-          {product.nombre}
-        </Text>
-        <Text style={styles.productPrice}>
-          {formatCurrency(product.precio)}
-        </Text>
-        <View style={styles.productFooter}>
-          <View style={styles.productCategoryBadge}>
-            <Text style={styles.productCategoryText} numberOfLines={1}>
-              {formatCategory(product.categoria)}
-            </Text>
-          </View>
-          <View
-            style={[
-              styles.availabilityDot,
-              { backgroundColor: product.disponible ? Colors.success : Colors.error },
-            ]}
-          />
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-};
-
-const StoreCard = ({
-  store,
-  onPress,
-}: {
-  store: Store;
-  onPress: () => void;
-}) => {
-  const [imageError, setImageError] = useState(false);
-  return (
-    <TouchableOpacity
-      style={styles.storeCard}
-      onPress={onPress}
-      activeOpacity={0.85}
-    >
-      <View style={styles.storeAvatar}>
-        {store.imagenUrl && !imageError ? (
-          <Image
-            source={{ uri: store.imagenUrl }}
-            style={styles.storeAvatarImage}
-            onError={() => setImageError(true)}
-          />
-        ) : (
-          <Ionicons name="storefront-outline" size={28} color={Colors.orange[500]} />
-        )}
-      </View>
-      <View style={styles.storeInfo}>
-        <Text style={styles.storeName} numberOfLines={1}>
-          {store.nombre}
-        </Text>
-        {store.descripcion ? (
-          <Text style={styles.storeDesc} numberOfLines={2}>
-            {store.descripcion}
-          </Text>
-        ) : null}
-        <View style={styles.storeFooter}>
-          <View style={styles.storeEtaBadge}>
-            <Ionicons name="time-outline" size={12} color={Colors.orange[500]} />
-            <Text style={styles.storeEtaText}>15-25 min</Text>
-          </View>
-          <View
-            style={[
-              styles.storeStatusDot,
-              { backgroundColor: store.activo ? Colors.success : Colors.error },
-            ]}
-          />
-          <Text
-            style={[
-              styles.storeStatusText,
-              { color: store.activo ? Colors.success : Colors.error },
-            ]}
-          >
-            {store.activo ? "Abierto" : "Cerrado"}
-          </Text>
-        </View>
-      </View>
-      <Ionicons name="chevron-forward" size={20} color={Colors.gray[300]} />
-    </TouchableOpacity>
-  );
-};
-
 const SkeletonGrid = () => (
   <View style={styles.skeletonGrid}>
     {[0, 1, 2, 3].map((item) => (
-      <View
-        key={item}
-        style={styles.skeletonCard}
-      />
+      <View key={item} style={styles.skeletonCard} />
     ))}
   </View>
 );
@@ -556,34 +414,6 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   title: { fontSize: 24, fontWeight: "800", color: Colors.white },
-  cartHeaderButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: Colors.white,
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 2,
-    shadowColor: Colors.blue[900],
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-  },
-  cartBadge: {
-    position: "absolute",
-    top: -2,
-    right: -2,
-    minWidth: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: Colors.orange[500],
-    borderWidth: 2,
-    borderColor: Colors.white,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 4,
-  },
-  cartBadgeText: { color: Colors.white, fontSize: 10, fontWeight: "800" },
   toggleContainer: {
     flexDirection: "row",
     marginHorizontal: 16,
@@ -720,103 +550,6 @@ const styles = StyleSheet.create({
   listContent: { padding: 10, paddingBottom: 20 },
   storeListContent: { padding: 16, paddingBottom: 20, gap: 12 },
   footerLoader: { marginVertical: 18 },
-  productCard: {
-    flex: 1,
-    backgroundColor: Colors.white,
-    borderRadius: 16,
-    margin: 6,
-    overflow: "hidden",
-    elevation: 3,
-    shadowColor: Colors.blue[900],
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-  },
-  productImage: { width: "100%", height: 140 },
-  productImageFallback: {
-    width: "100%",
-    height: 140,
-    backgroundColor: Colors.gray[200],
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  productInfo: { padding: 10 },
-  productName: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: Colors.blue[900],
-    minHeight: 36,
-  },
-  productPrice: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: Colors.orange[500],
-    marginTop: 4,
-  },
-  productFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 6,
-  },
-  productCategoryBadge: {
-    maxWidth: "85%",
-    backgroundColor: Colors.gray[100],
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 10,
-  },
-  productCategoryText: { color: Colors.orange[500], fontSize: 10, fontWeight: "700" },
-  availabilityDot: { width: 8, height: 8, borderRadius: 4 },
-  storeCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: Colors.white,
-    borderRadius: 16,
-    padding: 14,
-    elevation: 2,
-    shadowColor: Colors.blue[900],
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    gap: 12,
-  },
-  storeAvatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.gray[100],
-    justifyContent: "center",
-    alignItems: "center",
-    overflow: "hidden",
-  },
-  storeAvatarImage: { width: 56, height: 56 },
-  storeInfo: { flex: 1 },
-  storeName: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: Colors.blue[900],
-    marginBottom: 4,
-  },
-  storeDesc: {
-    fontSize: 12,
-    color: Colors.gray[600],
-    lineHeight: 16,
-    marginBottom: 6,
-  },
-  storeFooter: { flexDirection: "row", alignItems: "center", gap: 6 },
-  storeEtaBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-    backgroundColor: Colors.gray[100],
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  storeEtaText: { fontSize: 11, fontWeight: "700", color: Colors.orange[500] },
-  storeStatusDot: { width: 6, height: 6, borderRadius: 3 },
-  storeStatusText: { fontSize: 11, fontWeight: "700" },
   skeletonGrid: { flexDirection: "row", flexWrap: "wrap", padding: 10 },
   skeletonCard: {
     flexBasis: "47%",

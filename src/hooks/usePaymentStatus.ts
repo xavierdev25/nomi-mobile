@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { Client } from '@stomp/stompjs';
 import * as SecureStore from 'expo-secure-store';
 import { API_URL } from '../constants';
-import { useCartStore } from '../store/cartStore';
 import { paymentsApi } from '../api';
 
 export type PaymentStatus = 'PENDIENTE' | 'APROBADO' | 'RECHAZADO' | 'CANCELADO';
@@ -19,9 +18,6 @@ export const usePaymentStatus = (orderId: number, userId: number) => {
         try {
             const payment = await paymentsApi.getByOrder(orderId);
             setStatus(payment.status as PaymentStatus);
-            if (payment.status === 'APROBADO') {
-                useCartStore.getState().clearCart();
-            }
             if (payment.status === 'APROBADO' || payment.status === 'RECHAZADO' || payment.status === 'CANCELADO') {
                 clearPolling();
             }
@@ -45,14 +41,12 @@ export const usePaymentStatus = (orderId: number, userId: number) => {
         const connect = async () => {
             const token = await SecureStore.getItemAsync('accessToken');
             if (!token || !mounted) {
-                setLoading(false); // ← agrega esto
+                setLoading(false);
                 return;
             }
-            // Polling como fallback inmediato
             await fetchStatus();
             pollingRef.current = setInterval(fetchStatus, 5000);
 
-            // WebSocket como canal principal
             const client = new Client({
                 brokerURL: WS_URL,
                 connectHeaders: { Authorization: `Bearer ${token}` },
@@ -62,10 +56,7 @@ export const usePaymentStatus = (orderId: number, userId: number) => {
                         try {
                             const event = JSON.parse(message.body);
                             if (event.orderId === orderId && event.type === 'PAYMENT_APPROVED') {
-                                if (mounted) {
-                                    setStatus('APROBADO');
-                                    useCartStore.getState().clearCart();
-                                }
+                                if (mounted) setStatus('APROBADO');
                                 clearPolling();
                             } else if (event.orderId === orderId && event.type === 'PAYMENT_REJECTED') {
                                 if (mounted) setStatus('RECHAZADO');

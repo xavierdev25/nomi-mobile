@@ -15,9 +15,17 @@
       }
     },
     "preview": {
+      "channel": "preview",
       "distribution": "internal"
     },
-    "production": {}
+    "production": {
+      "channel": "production",
+      "autoIncrement": "buildNumber",
+      "env": {
+        "APP_ENV": "production",
+        "EXPO_PUBLIC_API_URL": "https://api.foodv.pe"
+      }
+    }
   },
   "submit": {
     "production": {}

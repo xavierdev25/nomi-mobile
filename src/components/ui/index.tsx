@@ -123,6 +123,10 @@ export const Avatar = ({ name, size = 44, uri }: { name: string; size?: number; 
 export const Divider = () => <View style={styles.divider} />;
 
 export { Button, Input };
+export { SummaryRow } from './SummaryRow';
+export { CartHeaderButton } from './CartHeaderButton';
+export { ProductCard } from './ProductCard';
+export { StoreCard } from './StoreCard';
 
 const styles = StyleSheet.create({
   card: {

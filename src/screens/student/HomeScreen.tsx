@@ -4,6 +4,7 @@ import {
   View,
   Text,
   ScrollView,
+  FlatList,
   TouchableOpacity,
   StyleSheet,
   RefreshControl,
@@ -14,12 +15,13 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useAuthStore, useCartStore } from "../../store";
+import { useAuthStore } from "../../store";
 import { productsApi, aiApi } from "../../api";
 import { StudentStackParamList } from "../../navigation/types";
-import { Product, Recommendation } from "../../types";
-import { formatCurrency, truncateText } from "../../utils";
-import { PRODUCT_CATEGORIES } from "../../constants";
+import { Recommendation } from "../../types";
+import { formatCurrency } from "../../utils";
+import { CartHeaderButton } from "../../components/ui/CartHeaderButton";
+import { ProductCard } from "../../components/ui/ProductCard";
 
 export const HomeScreen = () => {
   const navigation =
@@ -67,7 +69,6 @@ export const HomeScreen = () => {
         />
       }
     >
-      {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <View style={styles.headerOrangeBlock} />
         <View>
@@ -75,7 +76,10 @@ export const HomeScreen = () => {
           <Text style={styles.subtitle}>¿Qué se te antoja hoy?</Text>
         </View>
         <View style={styles.headerActions}>
-          <CartHeaderButton onPress={() => navigation.navigate("Cart")} />
+          <CartHeaderButton
+            onPress={() => navigation.navigate("Cart")}
+            variant="dark"
+          />
           <View style={styles.avatarContainer}>
             <Text style={styles.avatarText}>
               {user?.nombres?.charAt(0)}
@@ -85,12 +89,13 @@ export const HomeScreen = () => {
         </View>
       </View>
 
-      {/* Recomendaciones IA */}
       {(loadingRecs || recommendations.length > 0) && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>🤖 Para ti</Text>
-            <Text style={styles.sectionSubtitle}>Recomendado por IA</Text>
+            <TouchableOpacity onPress={() => navigation.navigate("Recommendations")}>
+              <Text style={styles.sectionSubtitle}>Ver todas →</Text>
+            </TouchableOpacity>
           </View>
           {loadingRecs ? (
             <ActivityIndicator color={Colors.orange[500]} style={styles.inlineLoader} />
@@ -116,7 +121,6 @@ export const HomeScreen = () => {
         </View>
       )}
 
-      {/* Todos los productos */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>🍽️ Disponible ahora</Text>
@@ -124,41 +128,29 @@ export const HomeScreen = () => {
         {loadingProducts ? (
           <ActivityIndicator color={Colors.orange[500]} style={styles.inlineLoader} />
         ) : (
-          <View style={styles.productsGrid}>
-            {products.map((product) => (
+          <FlatList
+            data={products}
+            keyExtractor={(item) => item.id.toString()}
+            scrollEnabled={false}
+            renderItem={({ item }) => (
               <ProductCard
-                key={product.id}
-                product={product}
+                product={item}
+                variant="list"
+                showDescription
                 onPress={() =>
                   navigation.navigate("ProductDetail", {
-                    productId: product.id,
+                    productId: item.id,
                   })
                 }
               />
-            ))}
-          </View>
+            )}
+            ItemSeparatorComponent={() => <View style={styles.separator} />}
+          />
         )}
       </View>
 
       <View style={styles.bottomSpacer} />
     </ScrollView>
-  );
-};
-
-const CartHeaderButton = ({ onPress }: { onPress: () => void }) => {
-  const items = useCartStore((state) => state.items);
-  const getItemCount = useCartStore((state) => state.getItemCount);
-  const itemCount = getItemCount();
-
-  return (
-    <TouchableOpacity style={styles.cartHeaderButton} onPress={onPress}>
-      <Ionicons name="cart-outline" size={22} color={Colors.white} />
-      {items.length > 0 && (
-        <View style={styles.cartBadge}>
-          <Text style={styles.cartBadgeText}>{itemCount}</Text>
-        </View>
-      )}
-    </TouchableOpacity>
   );
 };
 
@@ -184,50 +176,6 @@ const RecommendationCard = ({
     </View>
     <View style={styles.recScore}>
       <Text style={styles.recScoreText}>⭐ {(rec.score * 10).toFixed(0)}</Text>
-    </View>
-  </TouchableOpacity>
-);
-
-const ProductCard = ({
-  product,
-  onPress,
-}: {
-  product: Product;
-  onPress: () => void;
-}) => (
-  <TouchableOpacity style={styles.productCard} onPress={onPress}>
-    <View style={styles.productImagePlaceholder}>
-      <Text style={styles.productEmoji}>
-        {product.categoria === "COMIDA"
-          ? "🍽️"
-          : product.categoria === "BEBIDA"
-            ? "🥤"
-            : product.categoria === "SNACK"
-              ? "🍿"
-              : product.categoria === "POSTRE"
-                ? "🍰"
-                : "🛍️"}
-      </Text>
-    </View>
-    <View style={styles.productInfo}>
-      <Text style={styles.productName} numberOfLines={1}>
-        {product.nombre}
-      </Text>
-      <Text style={styles.productDesc} numberOfLines={1}>
-        {truncateText(product.descripcion ?? "", 40)}
-      </Text>
-      <View style={styles.productFooter}>
-        <Text style={styles.productPrice}>
-          {formatCurrency(product.precio)}
-        </Text>
-        <View style={[styles.categoryBadge, { backgroundColor: Colors.gray[100] }]}>
-          <Text style={styles.categoryText}>
-            {PRODUCT_CATEGORIES[
-              product.categoria as keyof typeof PRODUCT_CATEGORIES
-            ] ?? product.categoria}
-          </Text>
-        </View>
-      </View>
     </View>
   </TouchableOpacity>
 );
@@ -265,29 +213,6 @@ const styles = StyleSheet.create({
   },
   avatarText: { fontSize: 16, fontWeight: "700", color: Colors.white },
   headerActions: { flexDirection: "row", alignItems: "center", gap: 10 },
-  cartHeaderButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: Colors.blue[400],
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  cartBadge: {
-    position: "absolute",
-    top: -2,
-    right: -2,
-    minWidth: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: Colors.orange[500],
-    borderWidth: 2,
-    borderColor: Colors.white,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 4,
-  },
-  cartBadgeText: { color: Colors.white, fontSize: 10, fontWeight: "800" },
   section: { paddingTop: 24, paddingHorizontal: 16 },
   sectionHeader: {
     flexDirection: "row",
@@ -331,37 +256,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   recScoreText: { fontSize: 11, color: Colors.white, fontWeight: "600" },
-  productsGrid: { gap: 12 },
-  productCard: {
-    flexDirection: "row",
-    backgroundColor: Colors.white,
-    borderRadius: 16,
-    overflow: "hidden",
-    shadowColor: Colors.blue[900],
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  productImagePlaceholder: {
-    width: 90,
-    backgroundColor: Colors.gray[100],
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  productEmoji: { fontSize: 32 },
-  productInfo: { flex: 1, padding: 14 },
-  productName: { fontSize: 15, fontWeight: "700", color: Colors.blue[900] },
-  productDesc: { fontSize: 12, color: Colors.gray[600], marginTop: 3 },
-  productFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 8,
-  },
-  productPrice: { fontSize: 16, fontWeight: "700", color: Colors.orange[500] },
-  categoryBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  categoryText: { fontSize: 10, fontWeight: "600", color: Colors.orange[500] },
+  separator: { height: 12 },
   bottomSpacer: { height: 100 },
   inlineLoader: { marginVertical: 20 },
 });

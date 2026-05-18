@@ -19,6 +19,7 @@ import { ratingsApi } from "../../api/ratings";
 import { StudentStackParamList } from "../../navigation/types";
 import { useCartStore } from "../../store/cartStore";
 import { ORDER_STATUS_LABEL, ORDER_STATUS_COLOR } from "../../constants";
+import { SummaryRow } from "../../components/ui/SummaryRow";
 
 type Props = NativeStackScreenProps<StudentStackParamList, "OrderDetail">;
 
@@ -62,8 +63,8 @@ export const OrderDetailScreen = ({ navigation, route }: Props) => {
   const cancelMutation = useMutation({
     mutationFn: (motivo: string) => ordersApi.cancel(orderId, motivo),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
       queryClient.invalidateQueries({ queryKey: ["order", orderId] });
-      queryClient.invalidateQueries({ queryKey: ["orders", "mine"] });
     },
   });
 
@@ -242,7 +243,7 @@ export const OrderDetailScreen = ({ navigation, route }: Props) => {
             <SummaryRow label="Propina" value={formatPrice(order.propina)} />
           ) : null}
           <View style={styles.divider} />
-          <SummaryRow label="TOTAL" value={formatPrice(order.total)} strong />
+          <SummaryRow label="TOTAL" value={formatPrice(order.total)} bold />
         </View>
 
         {/* Código de confirmación */}
@@ -376,25 +377,6 @@ export const OrderDetailScreen = ({ navigation, route }: Props) => {
     </SafeAreaView>
   );
 };
-
-const SummaryRow = ({
-  label,
-  value,
-  strong,
-}: {
-  label: string;
-  value: string;
-  strong?: boolean;
-}) => (
-  <View style={styles.summaryRow}>
-    <Text style={[styles.summaryLabel, strong && styles.summaryStrong]}>
-      {label}
-    </Text>
-    <Text style={[styles.summaryValue, strong && styles.summaryStrong]}>
-      {value}
-    </Text>
-  </View>
-);
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.offWhite },

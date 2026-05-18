@@ -10,10 +10,10 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import * as SecureStore from "expo-secure-store";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { authApi } from "@/api";
+import { getApiErrorMessage } from "@/utils/apiError";
 import { Button, Input } from "@/components/ui";
 import { AuthStackParamList } from "@/navigation/types";
 import { useAuthStore } from "@/store";
@@ -55,25 +55,10 @@ export const LoginScreen = ({ navigation }: LoginScreenProps) => {
     setErrors({});
     try {
       const authResponse = await authApi.login({ email: email.trim(), password });
-      await SecureStore.setItemAsync("accessToken", authResponse.accessToken);
-      await SecureStore.setItemAsync("refreshToken", authResponse.refreshToken);
       const user = await authApi.me();
       await setAuth(user, authResponse.accessToken, authResponse.refreshToken);
     } catch (error: unknown) {
-      const message =
-        typeof error === "object" &&
-        error !== null &&
-        "response" in error &&
-        typeof error.response === "object" &&
-        error.response !== null &&
-        "data" in error.response &&
-        typeof error.response.data === "object" &&
-        error.response.data !== null &&
-        "message" in error.response.data &&
-        typeof error.response.data.message === "string"
-          ? error.response.data.message
-          : "Credenciales inválidas. Intenta de nuevo.";
-      setErrors({ global: message });
+      setErrors({ global: getApiErrorMessage(error, "Credenciales inválidas. Intenta de nuevo.") });
       setShakeKey((prev) => prev + 1);
     } finally {
       setLoading(false);

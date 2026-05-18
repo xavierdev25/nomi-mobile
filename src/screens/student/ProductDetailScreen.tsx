@@ -3,13 +3,13 @@ import { Colors } from "@/theme/tokens";
 import {
   ActivityIndicator,
   Alert,
-  Image,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
@@ -17,9 +17,9 @@ import { productsApi } from "../../api";
 import { StudentStackParamList } from "../../navigation/types";
 import { useProductFavorite } from "../../hooks/useFavorite";
 import { useCartStore } from "../../store";
-
-const TARIFA_SERVICIO = 0.5;
-const COMISION_FOODV = 0.2;
+import { TARIFA_SERVICIO, COMISION_FOODV } from "../../constants";
+import { SummaryRow } from "../../components/ui/SummaryRow";
+import { formatCategory } from "../../utils";
 
 type ProductDetailScreenProps = NativeStackScreenProps<
   StudentStackParamList,
@@ -27,9 +27,6 @@ type ProductDetailScreenProps = NativeStackScreenProps<
 >;
 
 const formatPrice = (amount: number) => `S/ ${amount.toFixed(2)}`;
-
-const formatCategory = (category: string) =>
-  category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
 
 export const ProductDetailScreen = ({
   route,
@@ -140,7 +137,8 @@ export const ProductDetailScreen = ({
             <Image
               source={{ uri: product.imagenUrl }}
               style={styles.heroImage}
-              resizeMode="cover"
+              contentFit="cover"
+              transition={200}
               onError={() => setImageError(true)}
             />
           ) : (
@@ -235,7 +233,7 @@ export const ProductDetailScreen = ({
             <SummaryRow
               label="Total estimado"
               value={formatPrice(totalEstimado)}
-              strong
+              bold
             />
           </View>
 
@@ -289,25 +287,6 @@ export const ProductDetailScreen = ({
     </View>
   );
 };
-
-const SummaryRow = ({
-  label,
-  value,
-  strong,
-}: {
-  label: string;
-  value: string;
-  strong?: boolean;
-}) => (
-  <View style={styles.summaryRow}>
-    <Text style={[styles.summaryLabel, strong && styles.summaryStrong]}>
-      {label}
-    </Text>
-    <Text style={[styles.summaryValue, strong && styles.summaryStrong]}>
-      {value}
-    </Text>
-  </View>
-);
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.offWhite },
@@ -375,15 +354,6 @@ const styles = StyleSheet.create({
   availabilityRow: { flexDirection: "row", alignItems: "center" },
   availabilityDot: { width: 10, height: 10, borderRadius: 5, marginRight: 8 },
   availabilityText: { color: Colors.blue[900], fontSize: 14, fontWeight: "600" },
-  summaryRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  summaryLabel: { color: Colors.gray[600], fontSize: 14 },
-  summaryValue: { color: Colors.blue[900], fontSize: 14, fontWeight: "600" },
-  summaryStrong: { color: Colors.blue[900], fontSize: 16, fontWeight: "800" },
   divider: { height: 1, backgroundColor: Colors.gray[200], marginVertical: 8 },
   quantityRow: { flexDirection: "row", alignItems: "center" },
   quantityButton: {
@@ -443,14 +413,8 @@ const styles = StyleSheet.create({
     marginBottom: 2,
     alignSelf: "flex-start",
   },
-  storeButtonText: {
-    color: Colors.orange[500],
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  etaRow: {
-    marginTop: 12,
-  },
+  storeButtonText: { color: Colors.orange[500], fontSize: 13, fontWeight: "700" },
+  etaRow: { marginTop: 12 },
   etaBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -461,11 +425,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     alignSelf: "flex-start",
   },
-  etaText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: Colors.orange[500],
-  },
+  etaText: { fontSize: 13, fontWeight: "700", color: Colors.orange[500] },
   favoriteButton: {
     position: "absolute",
     top: 52,

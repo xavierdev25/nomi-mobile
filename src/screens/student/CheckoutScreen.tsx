@@ -15,12 +15,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import { aulasApi, ordersApi, paymentsApi } from "../../api";
+import { getApiErrorMessage } from "../../utils/apiError";
 import { StudentStackParamList } from "../../navigation/types";
 import { useCartStore } from "../../store/cartStore";
 import { Aula } from "../../types";
-
-const TARIFA_SERVICIO = 0.5;
-const COMISION_FOODV = 0.2;
+import { TARIFA_SERVICIO, COMISION_FOODV } from "../../constants";
+import { SummaryRow } from "../../components/ui/SummaryRow";
 
 type CheckoutScreenProps = NativeStackScreenProps<
   StudentStackParamList,
@@ -28,25 +28,6 @@ type CheckoutScreenProps = NativeStackScreenProps<
 >;
 
 const formatPrice = (amount: number) => `S/ ${amount.toFixed(2)}`;
-
-const getErrorMessage = (error: unknown) => {
-  if (
-    typeof error === "object" &&
-    error !== null &&
-    "response" in error &&
-    typeof error.response === "object" &&
-    error.response !== null &&
-    "data" in error.response &&
-    typeof error.response.data === "object" &&
-    error.response.data !== null &&
-    "message" in error.response.data &&
-    typeof error.response.data.message === "string"
-  ) {
-    return error.response.data.message;
-  }
-
-  return "Error al procesar el pago";
-};
 
 export const CheckoutScreen = ({ navigation }: CheckoutScreenProps) => {
   const items = useCartStore((state) => state.items);
@@ -124,22 +105,8 @@ export const CheckoutScreen = ({ navigation }: CheckoutScreenProps) => {
 
       navigation.navigate("OrderTracking", { orderId: order.id });
     } catch (err: unknown) {
-      console.error(
-        "[CheckoutScreen.handlePagar] Error completo:",
-        JSON.stringify(err, null, 2),
-      );
-
-      if (typeof err === "object" && err !== null && "response" in err) {
-        const axiosErr = err as { response: { status: number; data: unknown } };
-        console.error(
-          "[CheckoutScreen.handlePagar] Backend respondió |",
-          "status:",
-          axiosErr.response.status,
-          "| data:",
-          JSON.stringify(axiosErr.response.data, null, 2),
-        );
-      }
-      setError(getErrorMessage(err));
+      console.error('Checkout error:', getApiErrorMessage(err));
+      setError(getApiErrorMessage(err, "Error al procesar el pago"));
     } finally {
       setIsCreatingOrder(false);
     }
@@ -200,7 +167,7 @@ export const CheckoutScreen = ({ navigation }: CheckoutScreenProps) => {
           />
           <SummaryRow label="Propina" value={formatPrice(propina)} />
           <View style={styles.divider} />
-          <SummaryRow label="TOTAL" value={formatPrice(total)} strong />
+          <SummaryRow label="TOTAL" value={formatPrice(total)} bold />
         </View>
 
         <View style={styles.card}>
@@ -233,7 +200,6 @@ export const CheckoutScreen = ({ navigation }: CheckoutScreenProps) => {
           )}
         </View>
 
-        {/* Punto de encuentro */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Punto de encuentro</Text>
           <Text style={styles.meetingSubtitle}>
@@ -241,23 +207,11 @@ export const CheckoutScreen = ({ navigation }: CheckoutScreenProps) => {
           </Text>
           <View style={styles.meetingOptions}>
             {[
-              { id: "puerta", label: "🚪 Puerta del aula", icon: "puerta" },
-              { id: "pasillo", label: "🚶 Pasillo del piso", icon: "pasillo" },
-              {
-                id: "entrada",
-                label: "🏢 Entrada del pabellón",
-                icon: "entrada",
-              },
-              {
-                id: "escaleras",
-                label: "🪜 Escaleras del piso",
-                icon: "escaleras",
-              },
-              {
-                id: "recepcion",
-                label: "📋 Recepción del pabellón",
-                icon: "recepcion",
-              },
+              { id: "puerta", label: "🚪 Puerta del aula" },
+              { id: "pasillo", label: "🚶 Pasillo del piso" },
+              { id: "entrada", label: "🏢 Entrada del pabellón" },
+              { id: "escaleras", label: "🪜 Escaleras del piso" },
+              { id: "recepcion", label: "📋 Recepción del pabellón" },
             ].map((option) => (
               <TouchableOpacity
                 key={option.id}
@@ -367,25 +321,6 @@ const AulaCard = ({
   );
 };
 
-const SummaryRow = ({
-  label,
-  value,
-  strong,
-}: {
-  label: string;
-  value: string;
-  strong?: boolean;
-}) => (
-  <View style={styles.summaryRow}>
-    <Text style={[styles.summaryLabel, strong && styles.summaryStrong]}>
-      {label}
-    </Text>
-    <Text style={[styles.summaryValue, strong && styles.summaryStrong]}>
-      {value}
-    </Text>
-  </View>
-);
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.offWhite },
   header: {
@@ -437,15 +372,6 @@ const styles = StyleSheet.create({
   itemPrice: { color: Colors.blue[900], fontSize: 14, fontWeight: "800" },
   emptyText: { color: Colors.gray[600], fontSize: 14 },
   divider: { height: 1, backgroundColor: Colors.gray[200], marginVertical: 10 },
-  summaryRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  summaryLabel: { color: Colors.gray[600], fontSize: 14 },
-  summaryValue: { color: Colors.blue[900], fontSize: 14, fontWeight: "700" },
-  summaryStrong: { color: Colors.blue[900], fontSize: 17, fontWeight: "800" },
   inlineLoader: { marginVertical: 18 },
   aulasError: { alignItems: "center", paddingVertical: 12 },
   errorText: { color: Colors.gray[600], fontSize: 14, textAlign: "center" },
@@ -520,38 +446,12 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     gap: 6,
   },
-  etaText: {
-    fontSize: 13,
-    color: Colors.gray[600],
-    fontWeight: "600",
-  },
-  etaHighlight: {
-    color: Colors.orange[500],
-    fontWeight: "800",
-  },
-  etaDivider: {
-    width: 1,
-    height: 14,
-    backgroundColor: Colors.orange[400],
-    marginHorizontal: 2,
-  },
-  etaDelivery: {
-    fontSize: 13,
-    color: Colors.gray[600],
-    fontWeight: "600",
-  },
-  aulaTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    flexWrap: "wrap",
-  },
-  lastAulaBadge: {
-    backgroundColor: Colors.successSoft,
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
+  etaText: { fontSize: 13, color: Colors.gray[600], fontWeight: "600" },
+  etaHighlight: { color: Colors.orange[500], fontWeight: "800" },
+  etaDivider: { width: 1, height: 14, backgroundColor: Colors.orange[400], marginHorizontal: 2 },
+  etaDelivery: { fontSize: 13, color: Colors.gray[600], fontWeight: "600" },
+  aulaTitleRow: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
+  lastAulaBadge: { backgroundColor: Colors.successSoft, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
   lastAulaText: { fontSize: 10, fontWeight: "700", color: Colors.success },
   meetingSubtitle: { fontSize: 13, color: Colors.gray[600], marginBottom: 12 },
   meetingOptions: { gap: 8 },
